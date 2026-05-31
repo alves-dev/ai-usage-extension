@@ -1,0 +1,155 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#111827"/>
+      <stop offset="100%" stop-color="#0b1120"/>
+    </linearGradient>
+
+    <!-- Token bar gradient: green → orange → red -->
+    <linearGradient id="tokenGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%"   stop-color="#00ffa3"/>
+      <stop offset="60%"  stop-color="#fbbf24"/>
+      <stop offset="85%"  stop-color="#f97316"/>
+      <stop offset="100%" stop-color="#ef4444"/>
+    </linearGradient>
+
+    <!-- Same but clipped at 78% filled -->
+    <linearGradient id="tokenFill" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%"   stop-color="#00ffa3"/>
+      <stop offset="68%"  stop-color="#fbbf24"/>
+      <stop offset="88%"  stop-color="#f97316"/>
+      <stop offset="100%" stop-color="#ef4444"/>
+    </linearGradient>
+
+    <linearGradient id="cyanGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#00ffa3"/>
+      <stop offset="100%" stop-color="#00c8ff"/>
+    </linearGradient>
+
+    <linearGradient id="barSafe" x1="0%" y1="100%" x2="0%" y2="0%">
+      <stop offset="0%" stop-color="#00c8ff"/>
+      <stop offset="100%" stop-color="#00ffa3"/>
+    </linearGradient>
+    <linearGradient id="barWarn" x1="0%" y1="100%" x2="0%" y2="0%">
+      <stop offset="0%" stop-color="#f97316"/>
+      <stop offset="100%" stop-color="#fbbf24"/>
+    </linearGradient>
+    <linearGradient id="barDanger" x1="0%" y1="100%" x2="0%" y2="0%">
+      <stop offset="0%" stop-color="#ef4444"/>
+      <stop offset="100%" stop-color="#f97316"/>
+    </linearGradient>
+
+    <filter id="glow">
+      <feGaussianBlur stdDeviation="5" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <filter id="glowSm">
+      <feGaussianBlur stdDeviation="2.5" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <filter id="glowLg">
+      <feGaussianBlur stdDeviation="22" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+
+    <clipPath id="iconClip">
+      <rect x="0" y="0" width="512" height="512" rx="112" ry="112"/>
+    </clipPath>
+  </defs>
+
+  <!-- Background -->
+  <rect x="0" y="0" width="512" height="512" rx="112" ry="112" fill="url(#bg)"/>
+
+  <!-- Ambient glows -->
+  <g clip-path="url(#iconClip)">
+    <ellipse cx="130" cy="260" rx="150" ry="120" fill="#00ffa3" opacity="0.03" filter="url(#glowLg)"/>
+    <ellipse cx="390" cy="220" rx="130" ry="100" fill="#f97316" opacity="0.05" filter="url(#glowLg)"/>
+  </g>
+
+  <!-- ── TOKEN LIMIT METER (main hero element) ── -->
+  <!-- Container pill -->
+  <rect x="72" y="148" width="368" height="48" rx="24" fill="#0d1929" stroke="#1e3a55" stroke-width="1.5"/>
+
+  <!-- Fill bar at ~78% -->
+  <rect x="72" y="148" width="287" height="48" rx="24" fill="url(#tokenFill)" opacity="0.92" filter="url(#glowSm)"/>
+
+  <!-- Limit marker line at 80% -->
+  <rect x="366" y="142" width="3" height="60" rx="1.5" fill="#ef4444" opacity="0.9" filter="url(#glow)"/>
+  <!-- Limit label -->
+  <text x="370" y="137" font-family="'SF Mono', 'Fira Mono', monospace" font-size="16" fill="#ef4444" opacity="0.9">LIMIT</text>
+
+  <!-- Percentage text inside bar -->
+  <text x="200" y="181" font-family="'SF Mono', 'Fira Mono', monospace" font-size="22" font-weight="700" fill="#0b1120" text-anchor="middle" opacity="0.85">78 %  used</text>
+
+  <!-- ── TOKEN COUNT LABELS ── -->
+  <text x="72" y="215" font-family="'SF Mono', 'Fira Mono', monospace" font-size="18" fill="#00ffa3" opacity="0.7">0</text>
+  <text x="440" y="215" font-family="'SF Mono', 'Fira Mono', monospace" font-size="18" fill="#ef4444" opacity="0.7" text-anchor="end">1M</text>
+  <text x="256" y="215" font-family="'SF Mono', 'Fira Mono', monospace" font-size="18" fill="#94a3b8" opacity="0.5" text-anchor="middle">tokens</text>
+
+  <!-- ── MINI PROVIDER BARS (per-provider breakdown) ── -->
+  <!-- Section label -->
+  <text x="80" y="258" font-family="'SF Mono', 'Fira Mono', monospace" font-size="15" fill="#475569" letter-spacing="2">PROVIDERS</text>
+
+  <!-- Provider 1: llm_01 — safe -->
+  <text x="80" y="286" font-family="'SF Mono', 'Fira Mono', monospace" font-size="15" fill="#94a3b8">llm_01</text>
+  <rect x="170" y="273" width="230" height="14" rx="7" fill="#1e293b"/>
+  <rect x="170" y="273" width="138" height="14" rx="7" fill="url(#barSafe)" filter="url(#glowSm)"/>
+  <text x="412" y="285" font-family="'SF Mono', 'Fira Mono', monospace" font-size="13" fill="#00ffa3" text-anchor="end">60%</text>
+
+  <!-- Provider 2: llm_02 — warning -->
+  <text x="80" y="316" font-family="'SF Mono', 'Fira Mono', monospace" font-size="15" fill="#94a3b8">llm_02</text>
+  <rect x="170" y="303" width="230" height="14" rx="7" fill="#1e293b"/>
+  <rect x="170" y="303" width="184" height="14" rx="7" fill="url(#barWarn)" filter="url(#glowSm)"/>
+  <text x="412" y="315" font-family="'SF Mono', 'Fira Mono', monospace" font-size="13" fill="#fbbf24" text-anchor="end">80%</text>
+
+  <!-- Provider 3: llm_03 — danger -->
+  <text x="80" y="346" font-family="'SF Mono', 'Fira Mono', monospace" font-size="15" fill="#94a3b8">llm_03</text>
+  <rect x="170" y="333" width="230" height="14" rx="7" fill="#1e293b"/>
+  <rect x="170" y="333" width="216" height="14" rx="7" fill="url(#barDanger)" filter="url(#glowSm)"/>
+  <text x="412" y="345" font-family="'SF Mono', 'Fira Mono', monospace" font-size="13" fill="#ef4444" text-anchor="end">94%</text>
+
+  <!-- ── WARNING ICON (top-right) ── -->
+  <g filter="url(#glow)" transform="translate(390, 60)">
+    <!-- Triangle -->
+    <polygon points="36,6 66,58 6,58" fill="#0d1929" stroke="#f97316" stroke-width="3" stroke-linejoin="round"/>
+    <!-- Exclamation mark -->
+    <rect x="33" y="24" width="6" height="18" rx="3" fill="#f97316"/>
+    <circle cx="36" cy="49" r="3.5" fill="#f97316"/>
+  </g>
+
+  <!-- ── TOP LEFT: token chip icon ── -->
+  <g transform="translate(62, 52)" filter="url(#glowSm)">
+    <!-- Chip body -->
+    <rect x="8" y="8" width="52" height="52" rx="10" fill="#0d1929" stroke="#00ffa3" stroke-width="2"/>
+    <!-- Pins left -->
+    <rect x="0"  y="20" width="8" height="5" rx="2" fill="#00ffa3" opacity="0.6"/>
+    <rect x="0"  y="33" width="8" height="5" rx="2" fill="#00ffa3" opacity="0.6"/>
+    <rect x="0"  y="46" width="8" height="5" rx="2" fill="#00ffa3" opacity="0.6"/>
+    <!-- Pins right -->
+    <rect x="60" y="20" width="8" height="5" rx="2" fill="#00ffa3" opacity="0.6"/>
+    <rect x="60" y="33" width="8" height="5" rx="2" fill="#00ffa3" opacity="0.6"/>
+    <rect x="60" y="46" width="8" height="5" rx="2" fill="#00ffa3" opacity="0.6"/>
+    <!-- Inner label -->
+    <text x="34" y="40" font-family="'SF Mono', monospace" font-size="13" font-weight="700" fill="#00ffa3" text-anchor="middle">AI</text>
+  </g>
+
+  <!-- ── SEPARATOR LINE ── -->
+  <line x1="72" y1="363" x2="440" y2="363" stroke="#1e3a55" stroke-width="1" opacity="0.6"/>
+
+  <!-- ── BOTTOM TEXT ── -->
+  <text
+    x="256" y="432"
+    font-family="'SF Pro Display', 'Helvetica Neue', Arial, sans-serif"
+    font-size="62"
+    font-weight="900"
+    text-anchor="middle"
+    letter-spacing="1"
+  >
+    <tspan fill="#00ffa3" filter="url(#glowSm)">IA</tspan><tspan fill="#e2e8f0"> USAGE</tspan>
+  </text>
+
+  <!-- Bottom accent dots -->
+  <circle cx="222" cy="452" r="3" fill="#00ffa3" opacity="0.6"/>
+  <circle cx="236" cy="452" r="3" fill="#fbbf24" opacity="0.5"/>
+  <circle cx="250" cy="452" r="3" fill="#ef4444" opacity="0.4"/>
+</svg>

@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>AI Usage</title>
+    <link rel="stylesheet" href="options.css">
+  </head>
+  <body>
+    <main class="shell">
+      <header class="topbar">
+        <div class="brand">
+          <img class="brand-logo" src="/icons/ia_usage_icon_light.svg" alt="" aria-hidden="true">
+          <div>
+            <h1><span>AI</span> Usage</h1>
+            <p id="extensionVersion"></p>
+          </div>
+        </div>
+        <button id="saveButton" class="primary" type="button">Save settings</button>
+      </header>
+
+      <section class="section">
+        <div class="section-heading">
+          <div>
+            <h2>Home Assistant</h2>
+            <p>Webhook destination for collector payloads.</p>
+          </div>
+          <span id="haStatus" class="status-pill status-unknown">Waiting</span>
+        </div>
+
+        <div class="form-grid">
+          <label>
+            <span>Home Assistant URL</span>
+            <input id="haBaseUrl" type="url" placeholder="https://ha.example.com" autocomplete="off">
+          </label>
+
+          <label>
+            <span>Webhook ID or path</span>
+            <input id="haWebhook" type="text" placeholder="api/webhook/ai_tools_usage_xxxxx" autocomplete="off">
+          </label>
+
+          <label>
+            <span>Validation token</span>
+            <input id="haToken" type="password" autocomplete="off">
+          </label>
+        </div>
+
+        <div class="actions">
+          <button id="testHaButton" type="button">Test connection</button>
+          <span id="haLastTest" class="muted"></span>
+        </div>
+        <p id="haError" class="error-text"></p>
+      </section>
+
+      <section class="section">
+        <div class="section-heading">
+          <div>
+            <h2>Providers</h2>
+            <p>Enable collectors, set schedules, and run focused tests.</p>
+          </div>
+        </div>
+
+        <div id="providersList" class="providers"></div>
+      </section>
+    </main>
+
+    <template id="providerTemplate">
+      <article class="provider-card">
+        <div class="provider-main">
+          <div class="provider-identity">
+            <div class="provider-logo-wrap">
+              <img class="provider-logo" alt="">
+              <span class="provider-logo-fallback"></span>
+            </div>
+            <div>
+              <label class="toggle-row">
+                <input class="provider-enabled" type="checkbox">
+                <span class="provider-name"></span>
+              </label>
+              <p class="provider-description"></p>
+            </div>
+          </div>
+          <span class="provider-status status-pill status-unknown">Waiting</span>
+        </div>
+
+        <div class="provider-grid">
+          <label>
+            <span>Collection interval</span>
+            <div class="input-with-unit">
+              <input class="provider-interval" type="number" min="1" step="1">
+              <span>min</span>
+            </div>
+          </label>
+          <label>
+            <span>Last collection</span>
+            <output class="provider-last-run">-</output>
+          </label>
+          <label>
+            <span>Last delivery</span>
+            <output class="provider-last-sent">-</output>
+          </label>
+        </div>
+
+        <div class="provider-actions">
+          <button class="provider-test" type="button">Run now</button>
+          <span class="provider-error error-text"></span>
+        </div>
+      </article>
+    </template>
+
+    <script type="module" src="options.js"></script>
+  </body>
+</html>
