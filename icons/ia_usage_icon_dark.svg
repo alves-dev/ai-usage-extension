@@ -1,0 +1,161 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#111827"/>
+      <stop offset="100%" stop-color="#0b1120"/>
+    </linearGradient>
+
+    <!-- Gauge track fill: red → orange → yellow → green (alto uso = vermelho) -->
+    <linearGradient id="gaugeGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%"   stop-color="#ef4444"/>
+      <stop offset="20%"  stop-color="#f97316"/>
+      <stop offset="45%"  stop-color="#fbbf24"/>
+      <stop offset="100%" stop-color="#00ffa3"/>
+    </linearGradient>
+
+    <!-- Needle glow -->
+    <filter id="glow">
+      <feGaussianBlur stdDeviation="4" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <filter id="glowSm">
+      <feGaussianBlur stdDeviation="2" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <filter id="glowLg">
+      <feGaussianBlur stdDeviation="20" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+
+    <clipPath id="iconClip">
+      <rect x="0" y="0" width="512" height="512" rx="112" ry="112"/>
+    </clipPath>
+  </defs>
+
+  <!-- Background -->
+  <rect x="0" y="0" width="512" height="512" rx="112" ry="112" fill="url(#bg)"/>
+
+  <!-- Ambient glow -->
+  <g clip-path="url(#iconClip)">
+    <ellipse cx="256" cy="210" rx="180" ry="140" fill="#00ffa3" opacity="0.04" filter="url(#glowLg)"/>
+    <ellipse cx="380" cy="250" rx="120" ry="90"  fill="#ef4444" opacity="0.05" filter="url(#glowLg)"/>
+  </g>
+
+  <!--
+    ── GAUGE CHART ──
+    Half-circle gauge. Center: 256, 295. Radius outer: 155, inner: 105.
+    Arc spans from 180° to 0° (left to right across the top).
+    We draw it as thick stroked arcs using stroke-dasharray on circles.
+
+    Circumference of r=130 (midpoint): 2π×130 ≈ 816.8
+    Half circle = 408.4
+    We use a rotated circle so the half we want is the top half.
+    transform="rotate(180 256 295)" puts the arc start at the left.
+
+    stroke-dasharray="arc_length total_circumference"
+    For a semicircle: dasharray = "408 817"
+
+    We stack:
+    1. Track (dark)
+    2. Colored fill up to ~78%  → 408 * 0.78 ≈ 318
+    3. Tick marks
+    4. Needle
+  -->
+
+  <!-- === GAUGE TRACK === -->
+  <!-- Outer ring track -->
+  <circle
+    cx="256" cy="295" r="130"
+    fill="none"
+    stroke="#1e293b"
+    stroke-width="38"
+    stroke-dasharray="408 409"
+    stroke-dashoffset="0"
+    stroke-linecap="butt"
+    transform="rotate(180 256 295)"
+  />
+
+  <!-- Colored arc fill ~78% of 408 = 318 -->
+  <circle
+    cx="256" cy="295" r="130"
+    fill="none"
+    stroke="url(#gaugeGrad)"
+    stroke-width="38"
+    stroke-dasharray="318 499"
+    stroke-dashoffset="0"
+    stroke-linecap="butt"
+    transform="rotate(180 256 295)"
+    filter="url(#glowSm)"
+  />
+
+  <!-- Inner ring cutout (creates the arc "ring" look) -->
+  <circle
+    cx="256" cy="295" r="130"
+    fill="none"
+    stroke="#111827"
+    stroke-width="14"
+    stroke-dasharray="416 400"
+    stroke-dashoffset="0"
+    transform="rotate(180 256 295)"
+  />
+
+  <!-- === TICK MARKS === -->
+  <!-- 5 ticks evenly spaced across the 180° arc -->
+  <!-- Angles: 180°, 225°, 270°, 315°, 360° from center -->
+  <!-- We draw short lines at r=155 (outer edge) pointing inward -->
+  <g stroke="#111827" stroke-width="3" stroke-linecap="round">
+    <!-- 0% — left end (180°) -->
+    <line x1="126" y1="295" x2="114" y2="295"/>
+    <!-- 25% — 225° -->
+    <line x1="164" y1="203" x2="156" y2="195"/>
+    <!-- 50% — top (270°) -->
+    <line x1="256" y1="165" x2="256" y2="153"/>
+    <!-- 75% — 315° -->
+    <line x1="348" y1="203" x2="356" y2="195"/>
+    <!-- 100% — right end (0°) -->
+    <line x1="386" y1="295" x2="398" y2="295"/>
+  </g>
+
+  <!-- === NEEDLE === -->
+  <!-- 78% of 180° = 140.4° from left → angle from standard = 180° - 140.4° = 39.6° -->
+  <!-- Point at r=118: x=256+118×cos(39.6°), y=295+118×sin(-39.6°) -->
+  <!-- cos(39.6°)≈0.771, sin(39.6°)≈0.636 -->
+  <!-- tip: x=256+118×0.771=347, y=295-118×0.636=220 -->
+  <line x1="256" y1="295" x2="344" y2="220"
+    stroke="#ffffff" stroke-width="5" stroke-linecap="round"
+    filter="url(#glow)"
+  />
+  <!-- Needle base circle -->
+  <circle cx="256" cy="295" r="12" fill="#1e293b" stroke="#ffffff" stroke-width="3"/>
+  <circle cx="256" cy="295" r="5"  fill="#00ffa3" filter="url(#glowSm)"/>
+
+  <!-- === CENTER READOUT === -->
+  <text x="256" y="278"
+    font-family="'SF Mono', 'Fira Mono', monospace"
+    font-size="30" font-weight="700"
+    fill="#ffffff" text-anchor="middle"
+    filter="url(#glowSm)"
+  >78%</text>
+
+  <!-- === SCALE LABELS === -->
+  <text x="112" y="318" font-family="'SF Mono', monospace" font-size="20" fill="#ef4444" opacity="0.8" text-anchor="middle">0%</text>
+  <text x="400" y="318" font-family="'SF Mono', monospace" font-size="20" fill="#00ffa3" opacity="0.8" text-anchor="middle">100%</text>
+
+  <!-- === SEPARATOR === -->
+  <line x1="80" y1="338" x2="432" y2="338" stroke="#1e3a55" stroke-width="1.5" opacity="0.7"/>
+
+  <!-- === BOTTOM TEXT === -->
+  <text
+    x="256" y="430"
+    font-family="'SF Pro Display', 'Helvetica Neue', Arial, sans-serif"
+    font-size="62" font-weight="900"
+    text-anchor="middle" letter-spacing="1"
+  >
+    <tspan fill="#00ffa3" filter="url(#glowSm)">IA</tspan><tspan fill="#e2e8f0"> USAGE</tspan>
+  </text>
+
+  <!-- Bottom accent dots -->
+  <circle cx="222" cy="452" r="3.5" fill="#00ffa3" opacity="0.7"/>
+  <circle cx="236" cy="452" r="3.5" fill="#fbbf24" opacity="0.6"/>
+  <circle cx="250" cy="452" r="3.5" fill="#ef4444" opacity="0.5"/>
+</svg>

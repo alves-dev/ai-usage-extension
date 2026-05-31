@@ -1,47 +1,26 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
   <defs>
-    <!-- Light background -->
     <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
       <stop offset="0%" stop-color="#f0f4ff"/>
       <stop offset="100%" stop-color="#e4edf8"/>
     </linearGradient>
 
-    <!-- Token fill: green → yellow → orange → red (same as dark) -->
-    <linearGradient id="tokenFill" x1="0%" y1="0%" x2="100%" y2="0%">
-      <stop offset="0%"   stop-color="#00c48a"/>
-      <stop offset="68%"  stop-color="#f59e0b"/>
-      <stop offset="88%"  stop-color="#ea6c00"/>
-      <stop offset="100%" stop-color="#dc2626"/>
-    </linearGradient>
-
-    <!-- Provider bars -->
-    <linearGradient id="barSafe" x1="0%" y1="100%" x2="0%" y2="0%">
-      <stop offset="0%" stop-color="#0099dd"/>
+    <!-- Gauge track fill: red → orange → yellow → green (mesmo que dark) -->
+    <linearGradient id="gaugeGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%"   stop-color="#dc2626"/>
+      <stop offset="20%"  stop-color="#ea6c00"/>
+      <stop offset="45%"  stop-color="#d97706"/>
       <stop offset="100%" stop-color="#00c48a"/>
-    </linearGradient>
-    <linearGradient id="barWarn" x1="0%" y1="100%" x2="0%" y2="0%">
-      <stop offset="0%" stop-color="#ea6c00"/>
-      <stop offset="100%" stop-color="#f59e0b"/>
-    </linearGradient>
-    <linearGradient id="barDanger" x1="0%" y1="100%" x2="0%" y2="0%">
-      <stop offset="0%" stop-color="#dc2626"/>
-      <stop offset="100%" stop-color="#ea6c00"/>
-    </linearGradient>
-
-    <!-- Chip accent -->
-    <linearGradient id="chipGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#00c48a"/>
-      <stop offset="100%" stop-color="#0099dd"/>
     </linearGradient>
 
     <filter id="shadow">
       <feDropShadow dx="0" dy="2" stdDeviation="4" flood-color="#00000018"/>
     </filter>
     <filter id="shadowSm">
-      <feDropShadow dx="0" dy="1" stdDeviation="2" flood-color="#00000012"/>
+      <feDropShadow dx="0" dy="1" stdDeviation="2" flood-color="#00000014"/>
     </filter>
     <filter id="glowLg">
-      <feGaussianBlur stdDeviation="22" result="b"/>
+      <feGaussianBlur stdDeviation="20" result="b"/>
       <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
     </filter>
 
@@ -53,90 +32,92 @@
   <!-- Background -->
   <rect x="0" y="0" width="512" height="512" rx="112" ry="112" fill="url(#bg)"/>
 
-  <!-- Subtle ambient tints -->
+  <!-- Ambient tints -->
   <g clip-path="url(#iconClip)">
-    <ellipse cx="130" cy="260" rx="160" ry="120" fill="#00c48a" opacity="0.05" filter="url(#glowLg)"/>
-    <ellipse cx="390" cy="220" rx="130" ry="100" fill="#ea6c00" opacity="0.06" filter="url(#glowLg)"/>
+    <ellipse cx="256" cy="210" rx="180" ry="140" fill="#00c48a" opacity="0.05" filter="url(#glowLg)"/>
+    <ellipse cx="380" cy="250" rx="120" ry="90"  fill="#dc2626" opacity="0.05" filter="url(#glowLg)"/>
   </g>
 
-  <!-- ── TOKEN LIMIT METER ── -->
-  <!-- Container pill -->
-  <rect x="72" y="148" width="368" height="48" rx="24" fill="#ffffff" stroke="#d1dce8" stroke-width="1.5" filter="url(#shadow)"/>
+  <!-- === GAUGE TRACK === -->
+  <circle
+    cx="256" cy="295" r="130"
+    fill="none"
+    stroke="#d1dce8"
+    stroke-width="38"
+    stroke-dasharray="408 409"
+    stroke-dashoffset="0"
+    stroke-linecap="butt"
+    transform="rotate(180 256 295)"
+  />
 
-  <!-- Fill bar at ~78% -->
-  <rect x="72" y="148" width="287" height="48" rx="24" fill="url(#tokenFill)" opacity="0.88" filter="url(#shadowSm)"/>
+  <!-- Colored arc fill ~78% -->
+  <circle
+    cx="256" cy="295" r="130"
+    fill="none"
+    stroke="url(#gaugeGrad)"
+    stroke-width="38"
+    stroke-dasharray="318 499"
+    stroke-dashoffset="0"
+    stroke-linecap="butt"
+    transform="rotate(180 256 295)"
+    filter="url(#shadowSm)"
+  />
 
-  <!-- Limit marker -->
-  <rect x="366" y="142" width="3" height="60" rx="1.5" fill="#dc2626" opacity="0.85"/>
-  <text x="370" y="137" font-family="'SF Mono', 'Fira Mono', monospace" font-size="16" fill="#dc2626" opacity="0.85">LIMIT</text>
+  <!-- Inner cutout -->
+  <circle
+    cx="256" cy="295" r="130"
+    fill="none"
+    stroke="#f0f4ff"
+    stroke-width="14"
+    stroke-dasharray="416 400"
+    stroke-dashoffset="0"
+    transform="rotate(180 256 295)"
+  />
 
-  <!-- Percentage text inside bar -->
-  <text x="200" y="181" font-family="'SF Mono', 'Fira Mono', monospace" font-size="22" font-weight="700" fill="#ffffff" text-anchor="middle" opacity="0.95">78 %  used</text>
-
-  <!-- ── TOKEN COUNT LABELS ── -->
-  <text x="72"  y="215" font-family="'SF Mono', 'Fira Mono', monospace" font-size="18" fill="#00c48a" opacity="0.8">0</text>
-  <text x="440" y="215" font-family="'SF Mono', 'Fira Mono', monospace" font-size="18" fill="#dc2626" opacity="0.8" text-anchor="end">1M</text>
-  <text x="256" y="215" font-family="'SF Mono', 'Fira Mono', monospace" font-size="18" fill="#64748b" opacity="0.6" text-anchor="middle">tokens</text>
-
-  <!-- ── PROVIDER BREAKDOWN ── -->
-  <text x="80" y="258" font-family="'SF Mono', 'Fira Mono', monospace" font-size="15" fill="#94a3b8" letter-spacing="2">PROVIDERS</text>
-
-  <!-- llm_01 — safe -->
-  <text x="80" y="286" font-family="'SF Mono', 'Fira Mono', monospace" font-size="15" fill="#475569">llm_01</text>
-  <rect x="170" y="273" width="230" height="14" rx="7" fill="#dde6f0"/>
-  <rect x="170" y="273" width="138" height="14" rx="7" fill="url(#barSafe)" filter="url(#shadowSm)"/>
-  <text x="412" y="285" font-family="'SF Mono', 'Fira Mono', monospace" font-size="13" fill="#00a876" text-anchor="end">60%</text>
-
-  <!-- llm_02 — warning -->
-  <text x="80" y="316" font-family="'SF Mono', 'Fira Mono', monospace" font-size="15" fill="#475569">llm_02</text>
-  <rect x="170" y="303" width="230" height="14" rx="7" fill="#dde6f0"/>
-  <rect x="170" y="303" width="184" height="14" rx="7" fill="url(#barWarn)" filter="url(#shadowSm)"/>
-  <text x="412" y="315" font-family="'SF Mono', 'Fira Mono', monospace" font-size="13" fill="#d97706" text-anchor="end">80%</text>
-
-  <!-- llm_03 — danger -->
-  <text x="80" y="346" font-family="'SF Mono', 'Fira Mono', monospace" font-size="15" fill="#475569">llm_03</text>
-  <rect x="170" y="333" width="230" height="14" rx="7" fill="#dde6f0"/>
-  <rect x="170" y="333" width="216" height="14" rx="7" fill="url(#barDanger)" filter="url(#shadowSm)"/>
-  <text x="412" y="345" font-family="'SF Mono', 'Fira Mono', monospace" font-size="13" fill="#dc2626" text-anchor="end">94%</text>
-
-  <!-- ── WARNING ICON (top-right) ── -->
-  <g transform="translate(390, 60)" filter="url(#shadowSm)">
-    <polygon points="36,6 66,58 6,58" fill="#fff7ed" stroke="#ea6c00" stroke-width="3" stroke-linejoin="round"/>
-    <rect x="33" y="24" width="6" height="18" rx="3" fill="#ea6c00"/>
-    <circle cx="36" cy="49" r="3.5" fill="#ea6c00"/>
+  <!-- === TICK MARKS === -->
+  <g stroke="#f0f4ff" stroke-width="3" stroke-linecap="round">
+    <line x1="126" y1="295" x2="114" y2="295"/>
+    <line x1="164" y1="203" x2="156" y2="195"/>
+    <line x1="256" y1="165" x2="256" y2="153"/>
+    <line x1="348" y1="203" x2="356" y2="195"/>
+    <line x1="386" y1="295" x2="398" y2="295"/>
   </g>
 
-  <!-- ── TOP LEFT: chip icon ── -->
-  <g transform="translate(62, 52)" filter="url(#shadowSm)">
-    <rect x="8" y="8" width="52" height="52" rx="10" fill="#ffffff" stroke="#00c48a" stroke-width="2"/>
-    <!-- Pins left -->
-    <rect x="0"  y="20" width="8" height="5" rx="2" fill="#00c48a" opacity="0.7"/>
-    <rect x="0"  y="33" width="8" height="5" rx="2" fill="#00c48a" opacity="0.7"/>
-    <rect x="0"  y="46" width="8" height="5" rx="2" fill="#00c48a" opacity="0.7"/>
-    <!-- Pins right -->
-    <rect x="60" y="20" width="8" height="5" rx="2" fill="#00c48a" opacity="0.7"/>
-    <rect x="60" y="33" width="8" height="5" rx="2" fill="#00c48a" opacity="0.7"/>
-    <rect x="60" y="46" width="8" height="5" rx="2" fill="#00c48a" opacity="0.7"/>
-    <text x="34" y="40" font-family="'SF Mono', monospace" font-size="13" font-weight="700" fill="#00c48a" text-anchor="middle">AI</text>
-  </g>
+  <!-- === NEEDLE === -->
+  <line x1="256" y1="295" x2="344" y2="220"
+    stroke="#1e293b" stroke-width="5" stroke-linecap="round"
+    filter="url(#shadowSm)"
+  />
+  <!-- Needle base -->
+  <circle cx="256" cy="295" r="12" fill="#ffffff" stroke="#1e293b" stroke-width="3" filter="url(#shadow)"/>
+  <circle cx="256" cy="295" r="5"  fill="#00c48a"/>
 
-  <!-- ── SEPARATOR ── -->
-  <line x1="72" y1="363" x2="440" y2="363" stroke="#c8d6e5" stroke-width="1" opacity="0.8"/>
+  <!-- === CENTER READOUT === -->
+  <text x="256" y="278"
+    font-family="'SF Mono', 'Fira Mono', monospace"
+    font-size="30" font-weight="700"
+    fill="#1e293b" text-anchor="middle"
+  >78%</text>
 
-  <!-- ── BOTTOM TEXT ── -->
+  <!-- === SCALE LABELS === -->
+  <text x="112" y="318" font-family="'SF Mono', monospace" font-size="20" fill="#dc2626" opacity="0.8" text-anchor="middle">0%</text>
+  <text x="400" y="318" font-family="'SF Mono', monospace" font-size="20" fill="#00a876" opacity="0.8" text-anchor="middle">100%</text>
+
+  <!-- === SEPARATOR === -->
+  <line x1="80" y1="338" x2="432" y2="338" stroke="#c8d6e5" stroke-width="1.5" opacity="0.8"/>
+
+  <!-- === BOTTOM TEXT === -->
   <text
-    x="256" y="432"
+    x="256" y="430"
     font-family="'SF Pro Display', 'Helvetica Neue', Arial, sans-serif"
-    font-size="62"
-    font-weight="900"
-    text-anchor="middle"
-    letter-spacing="1"
+    font-size="62" font-weight="900"
+    text-anchor="middle" letter-spacing="1"
   >
     <tspan fill="#00a876">IA</tspan><tspan fill="#1e293b"> USAGE</tspan>
   </text>
 
   <!-- Bottom accent dots -->
-  <circle cx="222" cy="452" r="3" fill="#00c48a" opacity="0.7"/>
-  <circle cx="236" cy="452" r="3" fill="#f59e0b" opacity="0.6"/>
-  <circle cx="250" cy="452" r="3" fill="#dc2626" opacity="0.5"/>
+  <circle cx="222" cy="452" r="3.5" fill="#00c48a" opacity="0.7"/>
+  <circle cx="236" cy="452" r="3.5" fill="#d97706" opacity="0.6"/>
+  <circle cx="250" cy="452" r="3.5" fill="#dc2626" opacity="0.5"/>
 </svg>
