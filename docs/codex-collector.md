@@ -36,38 +36,58 @@ Authorization: Bearer <accessToken>
 
 5. A request também deve usar `credentials: "include"`.
 6. A resposta JSON é parseada pelo collector.
-7. O payload enviado ao Home Assistant deve conter, no teste inicial, apenas os campos necessários.
+7. O payload enviado ao Home Assistant deve seguir `docs/payload-contract.md`.
 
-## Payload Inicial
+## Payload Contratado
 
-Para o primeiro teste fora da POC, manter o payload simples:
+Payload esperado pela integração Home Assistant para esta versão:
 
 ```json
 {
   "schema_version": "1.0",
   "source": "browser_extension",
-  "source_version": "0.1.1",
-  "collected_at": "2026-05-31T15:31:44.693Z",
+  "source_version": "0.1.0",
+  "collected_at": "2026-06-02T15:40:00.000Z",
   "provider": "codex",
   "status": "ok",
   "account_data": {
+    "user_id": "user-...",
+    "account_id": "user-...",
     "email": "user@example.com"
   },
   "plan_data": {
     "type": "plus"
   },
-  "provider_data": {},
+  "provider_data": {
+    "rate_limit": {
+      "allowed": true,
+      "limit_reached": false,
+      "primary_window": {
+        "used_percent": 1,
+        "limit_window_seconds": 18000,
+        "reset_after_seconds": 18000,
+        "reset_at": 1780434415
+      },
+      "secondary_window": {
+        "used_percent": 18,
+        "limit_window_seconds": 604800,
+        "reset_after_seconds": 429815,
+        "reset_at": 1780846229
+      }
+    }
+  },
   "error": null
 }
 ```
 
-Campos extraídos do response do Codex:
+Mapeamento do response do Codex:
 
-```json
-{
-  "email": "user@example.com",
-  "plan_type": "plus"
-}
+```text
+user_id -> account_data.user_id
+account_id -> account_data.account_id
+email -> account_data.email
+plan_type -> plan_data.type
+rate_limit -> provider_data.rate_limit
 ```
 
 ## Response Observado
@@ -151,4 +171,5 @@ A implementação real deve manter estas regras:
 - `backend-api/wham/usage` não é API pública documentada e pode mudar.
 - O token vem da sessão autenticada do usuário no navegador.
 - A extensão não faz login automático; se a sessão expirar, o usuário precisa autenticar manualmente no ChatGPT.
-- O endpoint retornou `email` e `plan_type` no teste validado; outros campos como `rate_limit` e `credits` devem ser adicionados depois com versionamento claro do payload.
+- O endpoint retornou `user_id`, `account_id`, `email`, `plan_type` e `rate_limit` no teste validado.
+- Campos como `credits`, `spend_control`, `promo` e `rate_limit_reset_credits` existem no response observado, mas são ignorados nesta versão do contrato.

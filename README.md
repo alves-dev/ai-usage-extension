@@ -1,4 +1,4 @@
-# AI Tools Usage Collector
+# AI Usage Extension
 
 POC de extensão Chromium/Chrome Manifest V3 para coletar usage de providers de IA usando a sessão autenticada do navegador e enviar payloads ao Home Assistant.
 
@@ -45,11 +45,12 @@ Codex:
 
 - chama `https://chatgpt.com/backend-api/wham/usage` com `credentials: "include"`;
 - se a chamada do service worker falhar, abre `https://chatgpt.com/codex/cloud/settings/analytics` e tenta o mesmo endpoint a partir da página autenticada;
-- no teste inicial envia `email` em `account_data` e `plan_type` em `plan_data.type`.
+- envia `user_id`, `account_id` e `email` em `account_data`, `plan_type` em `plan_data.type` e `rate_limit` em `provider_data.rate_limit`.
 
 Ollama Cloud:
 
 - chama `https://ollama.com/settings` com `fetch(url, { credentials: "include" })`;
+- extrai `username`, `email` e `plan` de campos, labels ou texto visível;
 - parseia o HTML procurando os blocos `Session usage` e `Weekly usage`;
 - extrai `used_percent` de `aria-label` e `reset_at` de `data-time`;
 - se a chamada direta falhar, abre uma aba inativa temporária, injeta um script de leitura e fecha a aba;
@@ -86,12 +87,31 @@ Sucesso Codex:
   "provider": "codex",
   "status": "ok",
   "account_data": {
-    "email": "optional@example.com"
+    "user_id": "user-...",
+    "account_id": "user-...",
+    "email": "user@example.com"
   },
   "plan_data": {
     "type": "plus"
   },
-  "provider_data": {},
+  "provider_data": {
+    "rate_limit": {
+      "allowed": true,
+      "limit_reached": false,
+      "primary_window": {
+        "used_percent": 1,
+        "limit_window_seconds": 18000,
+        "reset_after_seconds": 18000,
+        "reset_at": 1780434415
+      },
+      "secondary_window": {
+        "used_percent": 18,
+        "limit_window_seconds": 604800,
+        "reset_after_seconds": 429815,
+        "reset_at": 1780846229
+      }
+    }
+  },
   "error": null
 }
 ```
@@ -106,10 +126,14 @@ Sucesso Ollama Cloud:
   "collected_at": "2026-05-30T15:40:00Z",
   "provider": "ollama_cloud",
   "status": "ok",
-  "account_data": {},
-  "plan_data": {},
+  "account_data": {
+    "username": "alves-dev",
+    "email": "user@example.com"
+  },
+  "plan_data": {
+    "type": "free"
+  },
   "provider_data": {
-    "collection_method": "settings_html_fetch",
     "session_usage": {
       "used_percent": 0,
       "reset_at": "2026-05-31T19:00:00Z"

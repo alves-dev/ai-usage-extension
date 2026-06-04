@@ -14,8 +14,11 @@ O Ollama Cloud não expôs, neste teste, uma API JSON de usage. A página retorn
 
 ## Dados Coletados
 
-Para o teste inicial, coletar apenas:
+Campos coletados nesta versao:
 
+- username definido pelo usuario;
+- email da conta;
+- plano atual;
 - uso da janela de sessão atual em percentual;
 - data/hora de reset da janela de sessão;
 - uso semanal em percentual;
@@ -25,6 +28,13 @@ Exemplo:
 
 ```json
 {
+  "account_data": {
+    "username": "alves-dev",
+    "email": "user@example.com"
+  },
+  "plan_data": {
+    "type": "free"
+  },
   "session_usage": {
     "used_percent": 0,
     "reset_at": "2026-05-31T19:00:00.000Z"
@@ -110,15 +120,20 @@ O collector deve fazer:
 
 1. `GET https://ollama.com/settings` com `credentials: "include"`.
 2. Validar que o HTML não é uma página de login.
-3. Procurar o bloco `Session usage`.
-4. Dentro desse bloco, extrair:
+3. Extrair dados de perfil e plano:
+   - `username` de campos ou labels como `Username`, `User name` ou `Handle`;
+   - `email` de campos ou texto que contenha e-mail;
+   - `plan` de campos ou labels como `Plan`, `Current plan` ou `Subscription`.
+4. Procurar o bloco `Session usage`.
+5. Dentro desse bloco, extrair:
    - `used_percent` de `aria-label="Session usage 0% used"`;
    - `reset_at` de `data-time="2026-05-31T19:00:00Z"`.
-5. Procurar o bloco `Weekly usage`.
-6. Dentro desse bloco, extrair:
+6. Procurar o bloco `Weekly usage`.
+7. Dentro desse bloco, extrair:
    - `used_percent` de `aria-label="Weekly usage 4.4% used"`;
    - `reset_at` de `data-time="2026-06-01T00:00:00Z"`.
-7. Normalizar datas para ISO com milissegundos, via `new Date(value).toISOString()`.
+8. Normalizar datas para ISO com milissegundos, via `new Date(value).toISOString()`.
+9. Normalizar `plan` para `plan_data.type`, por exemplo `free`.
 
 ## Seletores E Atributos
 
@@ -143,7 +158,7 @@ Regex recomendada para reset:
 /data-time=["']([^"']+)["']/i
 ```
 
-## Payload Inicial
+## Payload Contratado
 
 Payload validado para o Home Assistant:
 
@@ -155,10 +170,14 @@ Payload validado para o Home Assistant:
   "collected_at": "2026-05-31T16:00:00.000Z",
   "provider": "ollama_cloud",
   "status": "ok",
-  "account_data": {},
-  "plan_data": {},
+  "account_data": {
+    "username": "alves-dev",
+    "email": "user@example.com"
+  },
+  "plan_data": {
+    "type": "free"
+  },
   "provider_data": {
-    "collection_method": "settings_html_fetch",
     "session_usage": {
       "used_percent": 0,
       "reset_at": "2026-05-31T19:00:00.000Z"
@@ -181,6 +200,7 @@ Se falhar por contexto de autenticação, CORS ou HTML incompleto, a extensão p
 1. Abrir aba inativa em `https://ollama.com/settings`.
 2. Injetar script via `chrome.scripting.executeScript`.
 3. Ler o DOM da página:
+   - extrair `username`, `email` e `plan` a partir de campos, labels ou texto visivel;
    - localizar `[data-usage-track]` cujo `aria-label` começa com `Session usage`;
    - localizar `[data-usage-track]` cujo `aria-label` começa com `Weekly usage`;
    - procurar o `[data-time]` no container pai de cada usage meter.
@@ -200,6 +220,7 @@ HTTP 5xx -> provider_unavailable
 Session usage ausente -> parse_error
 Weekly usage ausente -> parse_error
 Percentual ou data-time ausente -> parse_error
+Username, email ou plan ausente -> parse_error
 Erro de rede -> provider_unavailable
 ```
 

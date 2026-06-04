@@ -49,7 +49,7 @@ async function fetchOllamaSettingsUsage() {
       return unauthenticated('Ollama settings page requires login');
     }
 
-    return buildResultFromParsedUsage(parseOllamaSettingsUsageFromHtml(html), 'settings_html_fetch');
+    return buildResultFromParsedUsage(parseOllamaSettingsUsageFromHtml(html));
   } catch (error) {
     return {
       status: 'provider_unavailable',
@@ -75,12 +75,46 @@ function scrapeOllamaSettingsPage() {
     };
   }
 
-  const usage = {
+  const parsedSettings = {
+    account: readAccountFromDocument(),
+    plan: readPlanFromDocument(),
     session: readUsageFromDocument('Session usage'),
     weekly: readUsageFromDocument('Weekly usage'),
   };
 
-  return buildResultFromParsedUsage(usage);
+  return buildResultFromParsedUsage(parsedSettings);
+
+  function readAccountFromDocument() {
+    return {
+      username: readFieldValueFromDocument(['username', 'user name', 'handle']),
+      email: readFieldValueFromDocument(['email']) || findEmail(text),
+    };
+  }
+
+  function readPlanFromDocument() {
+    return {
+      type: readFieldValueFromDocument(['plan', 'current plan', 'subscription']) || findPlan(text),
+    };
+  }
+
+  function readFieldValueFromDocument(labels) {
+    const controls = Array.from(document.querySelectorAll('input, textarea, select'));
+    for (const control of controls) {
+      const metadata = [
+        control.name,
+        control.id,
+        control.autocomplete,
+        control.placeholder,
+        control.getAttribute('aria-label'),
+      ].join(' ');
+
+      if (labels.some((label) => normalizeLoose(metadata).includes(normalizeLoose(label))) && control.value) {
+        return control.value;
+      }
+    }
+
+    return findValueNearLabel(text, labels);
+  }
 
   function readUsageFromDocument(label) {
     const track = Array.from(document.querySelectorAll('[data-usage-track]'))
@@ -128,6 +162,8 @@ function scrapeOllamaSettingsPage() {
   function buildResultFromParsedUsage(parsedUsage) {
     const sessionUsage = normalizeUsageWindow(parsedUsage?.session);
     const weeklyUsage = normalizeUsageWindow(parsedUsage?.weekly);
+    const accountData = normalizeAccountData(parsedUsage?.account);
+    const planData = normalizePlanData(parsedUsage?.plan);
 
     if (!sessionUsage || !weeklyUsage) {
       return {
@@ -139,13 +175,33 @@ function scrapeOllamaSettingsPage() {
       };
     }
 
+    const missingFields = [];
+    if (!accountData.username) {
+      missingFields.push('account_data.username');
+    }
+    if (!accountData.email) {
+      missingFields.push('account_data.email');
+    }
+    if (!planData.type) {
+      missingFields.push('plan_data.type');
+    }
+
+    if (missingFields.length) {
+      return {
+        status: 'parse_error',
+        error: {
+          code: 'profile_fields_not_found',
+          message: `Ollama settings page did not include ${missingFields.join(', ')}`,
+        },
+      };
+    }
+
     return {
       status: 'ok',
       payload: {
-        account_data: {},
-        plan_data: {},
+        account_data: accountData,
+        plan_data: planData,
         provider_data: {
-          collection_method: 'settings_page_probe',
           session_usage: sessionUsage,
           weekly_usage: weeklyUsage,
         },
@@ -166,10 +222,105 @@ function scrapeOllamaSettingsPage() {
       reset_at: resetAt,
     };
   }
+
+  function normalizeAccountData(account) {
+    return pruneEmpty({
+      username: normalizeUsername(account?.username),
+      email: findEmail(account?.email),
+    });
+  }
+
+  function normalizePlanData(plan) {
+    return pruneEmpty({
+      type: normalizePlanType(plan?.type),
+    });
+  }
+
+  function normalizeUsername(value) {
+    const cleaned = cleanTextValue(value).replace(/^@/, '');
+    if (!cleaned || cleaned.includes('@')) {
+      return undefined;
+    }
+
+    const match = /[a-z0-9](?:[a-z0-9._-]{0,62}[a-z0-9])?/i.exec(cleaned);
+    const username = match?.[0];
+    return /^(change|edit|save|update|delete|settings|profile|account)$/i.test(username || '') ? undefined : username;
+  }
+
+  function normalizePlanType(value) {
+    const match = /\b(free|pro|team|enterprise)\b/i.exec(cleanTextValue(value));
+    return match?.[1]?.toLowerCase();
+  }
+
+  function findEmail(value) {
+    const match = /[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i.exec(String(value || ''));
+    return match?.[0];
+  }
+
+  function findPlan(value) {
+    const labeledPlan = findValueNearLabel(value, ['plan', 'current plan', 'subscription']);
+    return labeledPlan || /\b(free|pro|team|enterprise)\b/i.exec(String(value || ''))?.[1];
+  }
+
+  function findValueNearLabel(value, labels) {
+    const lines = String(value || '')
+      .split(/\n+/)
+      .map((line) => cleanTextValue(line))
+      .filter(Boolean);
+
+    for (let index = 0; index < lines.length; index += 1) {
+      const line = lines[index];
+      for (const label of labels) {
+        const pattern = new RegExp(`^${escapeRegExp(label)}\\s*:?\\s*(.*)$`, 'i');
+        const match = pattern.exec(line);
+        if (!match) {
+          continue;
+        }
+
+        if (match[1] && !isGenericLabel(match[1])) {
+          return match[1];
+        }
+
+        for (let offset = 1; offset <= 3; offset += 1) {
+          const candidate = lines[index + offset];
+          if (candidate && !isGenericLabel(candidate)) {
+            return candidate;
+          }
+        }
+      }
+    }
+
+    return undefined;
+  }
+
+  function cleanTextValue(value) {
+    return String(value || '').replace(/\s+/g, ' ').trim();
+  }
+
+  function isGenericLabel(value) {
+    return /^(username|user name|handle|email|plan|current plan|subscription|session usage|weekly usage)$/i.test(cleanTextValue(value));
+  }
+
+  function normalizeLoose(value) {
+    return String(value || '').toLowerCase().replace(/[^a-z0-9]+/g, '');
+  }
+
+  function pruneEmpty(object) {
+    return Object.fromEntries(
+      Object.entries(object).filter(([, value]) => value !== undefined && value !== null && value !== ''),
+    );
+  }
+
+  function escapeRegExp(value) {
+    return String(value).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  }
 }
 
 export function parseOllamaSettingsUsageFromHtml(html) {
+  const text = htmlToText(html);
   return {
+    account: parseOllamaAccountFromHtml(html, text),
+    plan: parseOllamaPlanFromHtml(html, text),
     session: parseUsageBlock(html, 'Session usage'),
     weekly: parseUsageBlock(html, 'Weekly usage'),
   };
@@ -204,9 +355,11 @@ function findResetAt(block) {
   return normalizeDate(dataTimeMatch?.[1]);
 }
 
-function buildResultFromParsedUsage(parsedUsage, collectionMethod) {
+function buildResultFromParsedUsage(parsedUsage) {
   const sessionUsage = normalizeUsageWindow(parsedUsage?.session);
   const weeklyUsage = normalizeUsageWindow(parsedUsage?.weekly);
+  const accountData = normalizeAccountData(parsedUsage?.account);
+  const planData = normalizePlanData(parsedUsage?.plan);
 
   if (!sessionUsage || !weeklyUsage) {
     return {
@@ -218,18 +371,214 @@ function buildResultFromParsedUsage(parsedUsage, collectionMethod) {
     };
   }
 
+  const missingFields = [];
+  if (!accountData.username) {
+    missingFields.push('account_data.username');
+  }
+  if (!accountData.email) {
+    missingFields.push('account_data.email');
+  }
+  if (!planData.type) {
+    missingFields.push('plan_data.type');
+  }
+
+  if (missingFields.length) {
+    return {
+      status: 'parse_error',
+      error: {
+        code: 'profile_fields_not_found',
+        message: `Ollama settings page did not include ${missingFields.join(', ')}`,
+      },
+    };
+  }
+
   return {
     status: 'ok',
     payload: {
-      account_data: {},
-      plan_data: {},
+      account_data: accountData,
+      plan_data: planData,
       provider_data: {
-        collection_method: collectionMethod,
         session_usage: sessionUsage,
         weekly_usage: weeklyUsage,
       },
     },
   };
+}
+
+function parseOllamaAccountFromHtml(html, text) {
+  return {
+    username:
+      findInputValue(html, ['username', 'user name', 'handle']) ||
+      findJsonValue(html, ['username', 'handle']) ||
+      findValueNearLabel(text, ['username', 'user name', 'handle']),
+    email:
+      findInputValue(html, ['email']) ||
+      findJsonValue(html, ['email']) ||
+      findEmail(text),
+  };
+}
+
+function parseOllamaPlanFromHtml(html, text) {
+  return {
+    type:
+      findInputValue(html, ['plan', 'current plan', 'subscription']) ||
+      findJsonValue(html, ['plan', 'plan_type', 'subscription', 'subscription_plan']) ||
+      findValueNearLabel(text, ['plan', 'current plan', 'subscription']) ||
+      findPlan(text),
+  };
+}
+
+function normalizeAccountData(account) {
+  return pruneEmpty({
+    username: normalizeUsername(account?.username),
+    email: findEmail(account?.email),
+  });
+}
+
+function normalizePlanData(plan) {
+  return pruneEmpty({
+    type: normalizePlanType(plan?.type),
+  });
+}
+
+function normalizeUsername(value) {
+  const cleaned = cleanTextValue(value).replace(/^@/, '');
+  if (!cleaned || cleaned.includes('@')) {
+    return undefined;
+  }
+
+  const match = /[a-z0-9](?:[a-z0-9._-]{0,62}[a-z0-9])?/i.exec(cleaned);
+  const username = match?.[0];
+  return /^(change|edit|save|update|delete|settings|profile|account)$/i.test(username || '') ? undefined : username;
+}
+
+function normalizePlanType(value) {
+  const match = /\b(free|pro|team|enterprise)\b/i.exec(cleanTextValue(value));
+  return match?.[1]?.toLowerCase();
+}
+
+function findInputValue(html, labels) {
+  const tags = String(html || '').match(/<(?:input|textarea|select)\b[^>]*>/gi) || [];
+  for (const tag of tags) {
+    const decodedTag = decodeHtmlEntities(tag);
+    const metadata = [
+      getAttributeFromTag(decodedTag, 'name'),
+      getAttributeFromTag(decodedTag, 'id'),
+      getAttributeFromTag(decodedTag, 'autocomplete'),
+      getAttributeFromTag(decodedTag, 'placeholder'),
+      getAttributeFromTag(decodedTag, 'aria-label'),
+    ].join(' ');
+
+    if (!labels.some((label) => normalizeLoose(metadata).includes(normalizeLoose(label)))) {
+      continue;
+    }
+
+    const value = getAttributeFromTag(decodedTag, 'value');
+    if (value) {
+      return value;
+    }
+  }
+
+  return undefined;
+}
+
+function findJsonValue(html, keys) {
+  const decoded = decodeHtmlEntities(html);
+  for (const key of keys) {
+    const pattern = new RegExp(`["']${escapeRegExp(key)}["']\\s*:\\s*["']([^"']+)["']`, 'i');
+    const match = pattern.exec(decoded);
+    if (match?.[1]) {
+      return match[1];
+    }
+  }
+
+  return undefined;
+}
+
+function findValueNearLabel(value, labels) {
+  const lines = String(value || '')
+    .split(/\n+/)
+    .map((line) => cleanTextValue(line))
+    .filter(Boolean);
+
+  for (let index = 0; index < lines.length; index += 1) {
+    const line = lines[index];
+    for (const label of labels) {
+      const pattern = new RegExp(`^${escapeRegExp(label)}\\s*:?\\s*(.*)$`, 'i');
+      const match = pattern.exec(line);
+      if (!match) {
+        continue;
+      }
+
+      if (match[1] && !isGenericLabel(match[1])) {
+        return match[1];
+      }
+
+      for (let offset = 1; offset <= 3; offset += 1) {
+        const candidate = lines[index + offset];
+        if (candidate && !isGenericLabel(candidate)) {
+          return candidate;
+        }
+      }
+    }
+  }
+
+  return undefined;
+}
+
+function findEmail(value) {
+  const match = /[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i.exec(String(value || ''));
+  return match?.[0];
+}
+
+function findPlan(value) {
+  const labeledPlan = findValueNearLabel(value, ['plan', 'current plan', 'subscription']);
+  return labeledPlan || /\b(free|pro|team|enterprise)\b/i.exec(String(value || ''))?.[1];
+}
+
+function htmlToText(html) {
+  return decodeHtmlEntities(String(html || '')
+    .replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, '\n')
+    .replace(/<style\b[^>]*>[\s\S]*?<\/style>/gi, '\n')
+    .replace(/<[^>]+>/g, '\n'))
+    .replace(/\n{2,}/g, '\n')
+    .trim();
+}
+
+function decodeHtmlEntities(value) {
+  return String(value || '')
+    .replace(/&quot;/g, '"')
+    .replace(/&#34;/g, '"')
+    .replace(/&#x22;/gi, '"')
+    .replace(/&apos;/g, "'")
+    .replace(/&#39;/g, "'")
+    .replace(/&#x27;/gi, "'")
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>');
+}
+
+function getAttributeFromTag(tag, name) {
+  const pattern = new RegExp(`\\b${escapeRegExp(name)}\\s*=\\s*(["'])(.*?)\\1`, 'i');
+  return pattern.exec(tag)?.[2];
+}
+
+function cleanTextValue(value) {
+  return String(value || '').replace(/\s+/g, ' ').trim();
+}
+
+function isGenericLabel(value) {
+  return /^(username|user name|handle|email|plan|current plan|subscription|session usage|weekly usage)$/i.test(cleanTextValue(value));
+}
+
+function normalizeLoose(value) {
+  return String(value || '').toLowerCase().replace(/[^a-z0-9]+/g, '');
+}
+
+function pruneEmpty(object) {
+  return Object.fromEntries(
+    Object.entries(object).filter(([, value]) => value !== undefined && value !== null && value !== ''),
+  );
 }
 
 function normalizeUsageWindow(windowUsage) {
