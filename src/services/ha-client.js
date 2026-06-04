@@ -2,10 +2,10 @@ import { EXTENSION_SOURCE, PAYLOAD_SCHEMA_VERSION } from '../utils/constants.js'
 import { nowIso } from '../utils/normalize.js';
 import { permissionsContains, permissionsRequest } from '../utils/chrome-promises.js';
 
-const TOKEN_HEADER = 'X-AI-Usage-Token';
+const WEBHOOK_PATH_PREFIX = 'api/webhook/';
 
 export function buildWebhookUrl(homeAssistantConfig) {
-  const webhook = String(homeAssistantConfig?.webhook || '').trim();
+  const webhook = normalizeWebhookId(homeAssistantConfig?.webhook);
   const baseUrl = String(homeAssistantConfig?.baseUrl || '').trim();
 
   if (!webhook) {
@@ -21,12 +21,20 @@ export function buildWebhookUrl(homeAssistantConfig) {
   }
 
   const normalizedBase = baseUrl.replace(/\/+$/, '');
-  const normalizedWebhook = webhook.replace(/^\/+/, '');
-  const path = normalizedWebhook.startsWith('api/webhook/')
-    ? normalizedWebhook
-    : `api/webhook/${normalizedWebhook}`;
+  return `${normalizedBase}/${WEBHOOK_PATH_PREFIX}${encodeURIComponent(webhook)}`;
+}
 
-  return `${normalizedBase}/${path}`;
+export function normalizeWebhookId(value) {
+  const rawValue = String(value || '').trim();
+  if (!rawValue) {
+    return '';
+  }
+
+  const withoutUrl = rawValue.replace(/^https?:\/\/[^/]+\/?/i, '');
+  return withoutUrl
+    .replace(/^\/+/, '')
+    .replace(new RegExp(`^${WEBHOOK_PATH_PREFIX}`, 'i'), '')
+    .replace(/^\/+|\/+$/g, '');
 }
 
 export function permissionForWebhook(homeAssistantConfig) {
@@ -49,7 +57,8 @@ export async function requestWebhookPermission(homeAssistantConfig) {
   return origin;
 }
 
-export async function sendPayloadToHomeAssistant(homeAssistantConfig, payload) {
+export async function sendPayloadToHomeAssistant(homeAssistantConfig, payload, options = {}) {
+  const { acceptedErrorStatuses = [] } = options;
   const webhookUrl = buildWebhookUrl(homeAssistantConfig);
   const hasPermission = await hasWebhookPermission(homeAssistantConfig);
 
@@ -69,10 +78,6 @@ export async function sendPayloadToHomeAssistant(homeAssistantConfig, payload) {
     Accept: 'application/json',
   };
 
-  if (homeAssistantConfig.token) {
-    headers[TOKEN_HEADER] = homeAssistantConfig.token;
-  }
-
   try {
     const response = await fetch(webhookUrl, {
       method: 'POST',
@@ -80,6 +85,14 @@ export async function sendPayloadToHomeAssistant(homeAssistantConfig, payload) {
       body: JSON.stringify(payload),
       cache: 'no-store',
     });
+
+    if (acceptedErrorStatuses.includes(response.status)) {
+      return {
+        ok: true,
+        status: 'ok',
+        httpStatus: response.status,
+      };
+    }
 
     if (!response.ok) {
       return {

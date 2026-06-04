@@ -1,5 +1,6 @@
 import { PROVIDER_ORDER, PROVIDERS } from '../utils/constants.js';
 import { storageGet, storageSet } from '../utils/chrome-promises.js';
+import { normalizeWebhookId } from './ha-client.js';
 
 const CONFIG_KEY = 'config';
 const STATE_KEY = 'state';
@@ -9,7 +10,6 @@ export function createDefaultConfig() {
     homeAssistant: {
       baseUrl: '',
       webhook: '',
-      token: '',
     },
     providers: Object.fromEntries(
       PROVIDER_ORDER.map((providerId) => [
@@ -93,6 +93,11 @@ function mergeConfig(storedConfig) {
       ...defaults.providers,
       ...(storedConfig?.providers || {}),
     },
+  };
+
+  config.homeAssistant = {
+    baseUrl: String(config.homeAssistant.baseUrl || '').trim(),
+    webhook: normalizeWebhookId(config.homeAssistant.webhook),
   };
 
   for (const providerId of PROVIDER_ORDER) {

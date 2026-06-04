@@ -10,7 +10,7 @@
     <main class="shell">
       <header class="topbar">
         <div class="brand">
-          <img class="brand-logo" src="/icons/ia_usage_icon_light.svg" alt="" aria-hidden="true">
+          <img class="brand-logo" src="/icons/icon@2x.png" alt="" aria-hidden="true">
           <div>
             <h1><span>AI</span> Usage</h1>
             <p id="extensionVersion"></p>
@@ -30,18 +30,16 @@
 
         <div class="form-grid">
           <label>
-            <span>Home Assistant URL</span>
+            <span>Home Assistant domain</span>
             <input id="haBaseUrl" type="url" placeholder="https://ha.example.com" autocomplete="off">
           </label>
 
           <label>
-            <span>Webhook ID or path</span>
-            <input id="haWebhook" type="text" placeholder="api/webhook/ai_tools_usage_xxxxx" autocomplete="off">
-          </label>
-
-          <label>
-            <span>Validation token</span>
-            <input id="haToken" type="password" autocomplete="off">
+            <span>Webhook ID</span>
+            <div class="webhook-id-field">
+              <span>/api/webhook/</span>
+              <input id="haWebhook" type="text" placeholder="ai_tools_usage_xxxxx" autocomplete="off">
+            </div>
           </label>
         </div>
 

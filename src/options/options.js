@@ -1,6 +1,6 @@
 import { PROVIDER_ORDER, PROVIDERS } from '../utils/constants.js';
 import { getConfig, getState } from '../services/storage.js';
-import { requestWebhookPermission } from '../services/ha-client.js';
+import { normalizeWebhookId, requestWebhookPermission } from '../services/ha-client.js';
 import { runtimeSendMessage } from '../utils/chrome-promises.js';
 
 let currentConfig;
@@ -11,7 +11,6 @@ const elements = {
   saveButton: document.querySelector('#saveButton'),
   haBaseUrl: document.querySelector('#haBaseUrl'),
   haWebhook: document.querySelector('#haWebhook'),
-  haToken: document.querySelector('#haToken'),
   haStatus: document.querySelector('#haStatus'),
   haLastTest: document.querySelector('#haLastTest'),
   haError: document.querySelector('#haError'),
@@ -37,8 +36,7 @@ async function loadAndRender() {
 
 function renderHomeAssistant() {
   elements.haBaseUrl.value = currentConfig.homeAssistant.baseUrl || '';
-  elements.haWebhook.value = currentConfig.homeAssistant.webhook || '';
-  elements.haToken.value = currentConfig.homeAssistant.token || '';
+  elements.haWebhook.value = normalizeWebhookId(currentConfig.homeAssistant.webhook || '');
 
   setStatusPill(elements.haStatus, currentState.homeAssistant.lastStatus);
   elements.haLastTest.textContent = currentState.homeAssistant.lastTestedAt
@@ -179,8 +177,7 @@ function readConfigFromForm() {
   return {
     homeAssistant: {
       baseUrl: elements.haBaseUrl.value.trim(),
-      webhook: elements.haWebhook.value.trim(),
-      token: elements.haToken.value,
+      webhook: normalizeWebhookId(elements.haWebhook.value),
     },
     providers,
   };

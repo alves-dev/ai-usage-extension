@@ -176,7 +176,7 @@ h2 {
 }
 
 .form-grid {
-  grid-template-columns: 1.2fr 1.1fr 0.8fr;
+  grid-template-columns: 1.2fr 1fr;
 }
 
 .providers {
@@ -253,6 +253,28 @@ h2 {
   grid-template-columns: 1fr auto;
   align-items: center;
   gap: 8px;
+}
+
+.webhook-id-field {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+}
+
+.webhook-id-field span {
+  height: 36px;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-right: 0;
+  border-radius: 6px 0 0 6px;
+  background: var(--surface-raised);
+  color: var(--text-secondary);
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+.webhook-id-field input {
+  border-radius: 0 6px 6px 0;
 }
 
 .input-with-unit span {

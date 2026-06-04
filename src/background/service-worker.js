@@ -120,7 +120,7 @@ async function runProviderAndSend(providerId) {
   };
 }
 
-async function maybeSendPayload(homeAssistantConfig, payload) {
+async function maybeSendPayload(homeAssistantConfig, payload, options = {}) {
   if (!homeAssistantConfig?.webhook) {
     return {
       ok: false,
@@ -132,13 +132,15 @@ async function maybeSendPayload(homeAssistantConfig, payload) {
     };
   }
 
-  return sendPayloadToHomeAssistant(homeAssistantConfig, payload);
+  return sendPayloadToHomeAssistant(homeAssistantConfig, payload, options);
 }
 
 async function testHomeAssistantConnection() {
   const config = await getConfig();
   const payload = createConnectionTestPayload(extensionVersion);
-  const delivery = await maybeSendPayload(config.homeAssistant, payload);
+  const delivery = await maybeSendPayload(config.homeAssistant, payload, {
+    acceptedErrorStatuses: [400],
+  });
 
   await updateHomeAssistantState({
     lastStatus: delivery.ok ? 'ok' : delivery.status,
