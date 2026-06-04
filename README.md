@@ -1,185 +1,69 @@
-# AI Usage Extension
+# AI Usage Collector
 
-POC de extensão Chromium/Chrome Manifest V3 para coletar usage de providers de IA usando a sessão autenticada do navegador e enviar payloads ao Home Assistant.
+Manifest V3 extension that collects AI provider usage data from the browser's authenticated session and sends structured payloads to a Home Assistant webhook.
 
-Neste primeiro teste os providers implementados são:
+## How It Works
 
-- Codex
-- Ollama Cloud
+The extension runs a background service worker. For each enabled provider, it schedules periodic collections with `chrome.alarms`, accesses the provider endpoints or pages using the browser's existing authenticated session, and normalizes the result to the contract documented in [`docs/payload-contract.md`](docs/payload-contract.md).
 
-## Estrutura
+After each collection, the payload is sent with `POST` to the configured Home Assistant webhook. The extension does not store provider tokens and does not send cookies, raw HTML, or API keys in the payload.
 
-```text
-.
-├── manifest.json
-├── src/
-│   ├── background/
-│   ├── options/
-│   ├── providers/
-│   ├── services/
-│   └── utils/
-└── icons/
-```
+## Supported Providers
 
-## Extensão
+- **Codex**: collects plan and usage limit data for Codex Cloud on `chatgpt.com`.
+- **Ollama Cloud**: collects account, plan, and usage limit data from the Ollama Cloud settings page.
 
-Carregue a raiz deste projeto como extensão não empacotada em `chrome://extensions`.
+Each provider can be enabled or disabled independently on the options page, with a configurable collection interval in minutes.
 
-Permissões fixas:
+## Home Assistant Configuration
 
-- `storage`
-- `alarms`
-- `scripting`
-- `tabs`
-- `https://chatgpt.com/*`
-- `https://ollama.com/*`
-- `https://www.ollama.com/*`
+On the extension options page, configure:
 
-O acesso ao host do Home Assistant é solicitado como permissão opcional apenas para a origem configurada.
+1. **Home Assistant domain**: the HA base domain, for example `https://ha.example.com`.
+2. **Webhook ID**: only the webhook ID, for example `ai_tools_usage_xxxxx`.
 
-## Coleta
-
-Cada provider roda como coletor independente. O payload segue o contrato em `docs/payload-contract.md`, mantendo envelope comum como `schema_version`, `source`, `source_version`, `collected_at`, `provider` e `status`.
-
-Codex:
-
-- chama `https://chatgpt.com/backend-api/wham/usage` com `credentials: "include"`;
-- se a chamada do service worker falhar, abre `https://chatgpt.com/codex/cloud/settings/analytics` e tenta o mesmo endpoint a partir da página autenticada;
-- envia `user_id`, `account_id` e `email` em `account_data`, `plan_type` em `plan_data.type` e `rate_limit` em `provider_data.rate_limit`.
-
-Ollama Cloud:
-
-- chama `https://ollama.com/settings` com `fetch(url, { credentials: "include" })`;
-- extrai `username`, `email` e `plan` de campos, labels ou texto visível;
-- parseia o HTML procurando os blocos `Session usage` e `Weekly usage`;
-- extrai `used_percent` de `aria-label` e `reset_at` de `data-time`;
-- se a chamada direta falhar, abre uma aba inativa temporária, injeta um script de leitura e fecha a aba;
-- envia ao HA apenas dados derivados, sem cookies, HTML bruto ou API keys.
-
-Os endpoints internos dos providers são candidatos de POC e podem mudar.
-
-## Home Assistant
-
-Esta extensão envia payloads para um webhook do Home Assistant. A integração ou automação que recebe esse webhook fica fora deste repositório.
-
-A URL final segue o formato:
+The extension builds the final URL as:
 
 ```text
-https://SEU_HA/api/webhook/WEBHOOK_ID
+https://ha.example.com/api/webhook/ai_tools_usage_xxxxx
 ```
 
-Se um token for configurado, a extensão envia o header:
+The **Test connection** button sends a test payload. If Home Assistant returns `400`, the test is considered successful because it confirms the request reached HA even though the test contract is invalid.
 
-```text
-X-AI-Usage-Token: TOKEN
+## Local Installation
+
+1. Open `chrome://extensions` in a Chromium-based browser.
+2. Enable **Developer mode**.
+3. Click **Load unpacked**.
+4. Select this repository folder.
+5. Open the extension options page and configure the webhook.
+
+After changing local files, reload the extension from `chrome://extensions`.
+
+## Development
+
+There is no build step or bundler. Source code lives in `src/`:
+
+- `src/background/`: service worker and page probe logic.
+- `src/options/`: configuration UI.
+- `src/providers/`: provider collectors.
+- `src/services/`: storage, scheduler, and Home Assistant client.
+- `src/utils/`: constants, normalization, and Chrome API wrappers.
+
+Available command:
+
+```bash
+npm run check
 ```
 
-## Payload
+This runs `node --check` for every JavaScript file in `src/`.
 
-Sucesso Codex:
+## Documentation
 
-```json
-{
-  "schema_version": "1.0",
-  "source": "browser_extension",
-  "source_version": "0.1.0",
-  "collected_at": "2026-05-30T15:40:00Z",
-  "provider": "codex",
-  "status": "ok",
-  "account_data": {
-    "user_id": "user-...",
-    "account_id": "user-...",
-    "email": "user@example.com"
-  },
-  "plan_data": {
-    "type": "plus"
-  },
-  "provider_data": {
-    "rate_limit": {
-      "allowed": true,
-      "limit_reached": false,
-      "primary_window": {
-        "used_percent": 1,
-        "limit_window_seconds": 18000,
-        "reset_after_seconds": 18000,
-        "reset_at": 1780434415
-      },
-      "secondary_window": {
-        "used_percent": 18,
-        "limit_window_seconds": 604800,
-        "reset_after_seconds": 429815,
-        "reset_at": 1780846229
-      }
-    }
-  },
-  "error": null
-}
-```
+- [`docs/payload-contract.md`](docs/payload-contract.md): payload contract sent to Home Assistant.
+- [`docs/codex-collector.md`](docs/codex-collector.md): Codex collection details.
+- [`docs/ollama-cloud-collector.md`](docs/ollama-cloud-collector.md): Ollama Cloud collection details.
 
-Sucesso Ollama Cloud:
+## Security
 
-```json
-{
-  "schema_version": "1.0",
-  "source": "browser_extension",
-  "source_version": "0.1.0",
-  "collected_at": "2026-05-30T15:40:00Z",
-  "provider": "ollama_cloud",
-  "status": "ok",
-  "account_data": {
-    "username": "alves-dev",
-    "email": "user@example.com"
-  },
-  "plan_data": {
-    "type": "free"
-  },
-  "provider_data": {
-    "session_usage": {
-      "used_percent": 0,
-      "reset_at": "2026-05-31T19:00:00Z"
-    },
-    "weekly_usage": {
-      "used_percent": 4.4,
-      "reset_at": "2026-06-01T00:00:00Z"
-    }
-  },
-  "error": null
-}
-```
-
-Erro:
-
-```json
-{
-  "schema_version": "1.0",
-  "source": "browser_extension",
-  "source_version": "0.1.0",
-  "collected_at": "2026-05-30T15:40:00Z",
-  "provider": "codex",
-  "status": "not_authenticated",
-  "account_data": {},
-  "plan_data": {},
-  "provider_data": {},
-  "error": {
-    "code": "not_authenticated",
-    "message": "User is not logged in"
-  }
-}
-```
-
-## Status
-
-- `ok`
-- `not_authenticated`
-- `provider_unavailable`
-- `parse_error`
-- `rate_limited`
-- `ha_unavailable`
-- `unknown_error`
-
-## Referências
-
-- Codex: `https://chatgpt.com/codex/pricing/`
-- Codex Help: `https://help.openai.com/en/articles/11369540-using-codex-with-your-chatgpt-plan`
-- Ollama Cloud: `https://docs.ollama.com/cloud`
-- Ollama API usage metrics: `https://docs.ollama.com/api/usage`
+Do not commit private webhook URLs, real provider responses, or account data. The extension depends on browser permissions to access the Home Assistant domain and the provider domains configured in `manifest.json`.
