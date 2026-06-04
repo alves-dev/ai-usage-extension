@@ -406,16 +406,46 @@ function buildResultFromParsedUsage(parsedUsage) {
 }
 
 function parseOllamaAccountFromHtml(html, text) {
+  const decodedHtml = decodeHtmlEntities(html);
   return {
     username:
       findInputValue(html, ['username', 'user name', 'handle']) ||
       findJsonValue(html, ['username', 'handle']) ||
+      findOllamaUsernameFromHtml(decodedHtml) ||
       findValueNearLabel(text, ['username', 'user name', 'handle']),
     email:
       findInputValue(html, ['email']) ||
       findJsonValue(html, ['email']) ||
       findEmail(text),
   };
+}
+
+function findOllamaUsernameFromHtml(html) {
+  const decoded = decodeHtmlEntities(html);
+  const anchorPattern = /<a\b[^>]*\bhref\s*=\s*(["'])(.*?)\1[^>]*>([\s\S]*?)<\/a>/gi;
+  let match;
+
+  while ((match = anchorPattern.exec(decoded))) {
+    const href = cleanTextValue(match[2]);
+    const text = cleanTextValue(stripHtml(match[3]));
+    const pathMatch = /^\/([a-z0-9](?:[a-z0-9._-]{0,62}[a-z0-9])?)$/i.exec(href);
+
+    if (isReservedOllamaPath(pathMatch?.[1])) {
+      continue;
+    }
+
+    const username = normalizeUsername(text || pathMatch?.[1]);
+
+    if (username && pathMatch?.[1]?.toLowerCase() === username.toLowerCase()) {
+      return username;
+    }
+  }
+
+  return undefined;
+}
+
+function isReservedOllamaPath(value) {
+  return /^(api|blog|docs|download|library|pricing|search|settings|signin|signout)$/i.test(value || '');
 }
 
 function parseOllamaPlanFromHtml(html, text) {
@@ -545,6 +575,10 @@ function htmlToText(html) {
     .trim();
 }
 
+function stripHtml(value) {
+  return String(value || '').replace(/<[^>]+>/g, ' ');
+}
+
 function decodeHtmlEntities(value) {
   return String(value || '')
     .replace(/&quot;/g, '"')
@@ -555,7 +589,9 @@ function decodeHtmlEntities(value) {
     .replace(/&#x27;/gi, "'")
     .replace(/&amp;/g, '&')
     .replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>');
+    .replace(/&gt;/g, '>')
+    .replace(/&#(\d+);/g, (_match, code) => String.fromCodePoint(Number(code)))
+    .replace(/&#x([0-9a-f]+);/gi, (_match, code) => String.fromCodePoint(Number.parseInt(code, 16)));
 }
 
 function getAttributeFromTag(tag, name) {
