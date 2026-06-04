@@ -15,6 +15,10 @@ After each collection, the payload is sent with `POST` to the configured Home As
 
 Each provider can be enabled or disabled independently on the options page, with a configurable collection interval in minutes.
 
+## Options Page
+
+![AI Usage Collector options page](docs/options-page.png)
+
 ## Home Assistant Configuration
 
 On the extension options page, configure:
