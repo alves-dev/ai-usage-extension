@@ -6,7 +6,7 @@
 [![Reliability Issues](https://sonar.alves-dev.com/api/project_badges/measure?project=ai-usage-extension&metric=software_quality_reliability_issues&token=sqb_3ab8842cf3278deb2395148a69098b74d0b33edf)](https://sonar.alves-dev.com/dashboard?id=ai-usage-extension)
 [![Security Issues](https://sonar.alves-dev.com/api/project_badges/measure?project=ai-usage-extension&metric=software_quality_security_issues&token=sqb_3ab8842cf3278deb2395148a69098b74d0b33edf)](https://sonar.alves-dev.com/dashboard?id=ai-usage-extension)
 
-Manifest V3 extension that collects AI provider usage data from the browser's authenticated session and sends structured payloads to a Home Assistant webhook.
+Manifest V3 extension that acts as a client/collector for the Home Assistant integration in [alves-dev/ai-usage](https://github.com/alves-dev/ai-usage). It collects AI provider usage data from the browser's authenticated session and sends structured payloads to a Home Assistant webhook.
 
 ## How It Works
 
