@@ -4,6 +4,10 @@
   "scripts": {
     "check": "npm run check:js",
     "check:js": "find src -name '*.js' -print0 | xargs -0 -n1 node --check",
-    "test": "node --test"
+    "test": "node --test",
+    "test:coverage": "c8 --reporter=lcov npm test"
+  },
+  "devDependencies": {
+    "c8": "^10.1.3"
   }
 }

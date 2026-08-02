@@ -41,3 +41,10 @@ test('parses account, plan, and usage windows from the settings page HTML', () =
     },
   });
 });
+
+test('parses the username from a profile link when no username input exists', () => {
+  assert.deepEqual(parseOllamaSettingsUsageFromHtml('<a href="/igor">igor</a>').account, {
+    username: 'igor',
+    email: undefined,
+  });
+});
