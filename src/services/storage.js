@@ -84,14 +84,14 @@ function mergeConfig(storedConfig) {
   const defaults = createDefaultConfig();
   const config = {
     ...defaults,
-    ...(storedConfig || {}),
+    ...storedConfig,
     homeAssistant: {
       ...defaults.homeAssistant,
-      ...(storedConfig?.homeAssistant || {}),
+      ...storedConfig?.homeAssistant,
     },
     providers: {
       ...defaults.providers,
-      ...(storedConfig?.providers || {}),
+      ...storedConfig?.providers,
     },
   };
 
@@ -103,7 +103,7 @@ function mergeConfig(storedConfig) {
   for (const providerId of PROVIDER_ORDER) {
     config.providers[providerId] = {
       ...defaults.providers[providerId],
-      ...(storedConfig?.providers?.[providerId] || {}),
+      ...storedConfig?.providers?.[providerId],
     };
     config.providers[providerId].intervalMinutes = clampInterval(
       config.providers[providerId].intervalMinutes,
@@ -119,17 +119,17 @@ function mergeState(storedState) {
   const defaults = createDefaultState();
   return {
     ...defaults,
-    ...(storedState || {}),
+    ...storedState,
     homeAssistant: {
       ...defaults.homeAssistant,
-      ...(storedState?.homeAssistant || {}),
+      ...storedState?.homeAssistant,
     },
     providers: Object.fromEntries(
       PROVIDER_ORDER.map((providerId) => [
         providerId,
         {
           ...defaults.providers[providerId],
-          ...(storedState?.providers?.[providerId] || {}),
+          ...storedState?.providers?.[providerId],
         },
       ]),
     ),

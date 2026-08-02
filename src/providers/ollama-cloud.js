@@ -7,6 +7,9 @@ export async function collectOllamaCloud(_settings, context) {
   }
 
   const probeResult = await context.runPageProbe(OLLAMA_SETTINGS_URL, scrapeOllamaSettingsPage);
+  if (probeResult?.status === 'ok' && probeResult.html) {
+    return buildResultFromParsedUsage(parseOllamaSettingsUsageFromHtml(probeResult.html));
+  }
   return probeResult || directResult;
 }
 
@@ -75,245 +78,35 @@ function scrapeOllamaSettingsPage() {
     };
   }
 
-  const parsedSettings = {
-    account: readAccountFromDocument(),
-    plan: readPlanFromDocument(),
-    session: readUsageFromDocument('Session usage'),
-    weekly: readUsageFromDocument('Weekly usage'),
-  };
-
-  return buildResultFromParsedUsage(parsedSettings);
-
-  function readAccountFromDocument() {
+  const page = document.documentElement?.cloneNode(true);
+  if (!page) {
     return {
-      username: readFieldValueFromDocument(['username', 'user name', 'handle']),
-      email: readFieldValueFromDocument(['email']) || findEmail(text),
-    };
-  }
-
-  function readPlanFromDocument() {
-    return {
-      type: readFieldValueFromDocument(['plan', 'current plan', 'subscription']) || findPlan(text),
-    };
-  }
-
-  function readFieldValueFromDocument(labels) {
-    const controls = Array.from(document.querySelectorAll('input, textarea, select'));
-    for (const control of controls) {
-      const metadata = [
-        control.name,
-        control.id,
-        control.autocomplete,
-        control.placeholder,
-        control.getAttribute('aria-label'),
-      ].join(' ');
-
-      if (labels.some((label) => normalizeLoose(metadata).includes(normalizeLoose(label))) && control.value) {
-        return control.value;
-      }
-    }
-
-    return findValueNearLabel(text, labels);
-  }
-
-  function readUsageFromDocument(label) {
-    const track = Array.from(document.querySelectorAll('[data-usage-track]'))
-      .find((element) => (element.getAttribute('aria-label') || '').toLowerCase().startsWith(label.toLowerCase()));
-    if (!track) {
-      return null;
-    }
-
-    const root = track.closest('div[data-usage-meter]')?.parentElement || track.parentElement;
-    const ariaLabel = track.getAttribute('aria-label') || '';
-    const resetElement = root?.querySelector('[data-time]');
-
-    return {
-      used_percent: extractPercent(ariaLabel),
-      reset_at: normalizeDate(resetElement?.getAttribute('data-time')),
-    };
-  }
-
-  function extractPercent(value) {
-    const match = /(\d+(?:[,.]\d+)?)\s*%\s*used/i.exec(String(value || ''));
-    if (!match) {
-      return undefined;
-    }
-    return toNumber(match[1]);
-  }
-
-  function toNumber(value) {
-    if (value === undefined || value === null || value === '') {
-      return undefined;
-    }
-
-    const parsed = Number(String(value || '').replace(',', '.'));
-    return Number.isFinite(parsed) ? parsed : undefined;
-  }
-
-  function normalizeDate(value) {
-    if (!value) {
-      return undefined;
-    }
-
-    const timestamp = Date.parse(String(value));
-    return Number.isNaN(timestamp) ? undefined : new Date(timestamp).toISOString();
-  }
-
-  function buildResultFromParsedUsage(parsedUsage) {
-    const sessionUsage = normalizeUsageWindow(parsedUsage?.session);
-    const weeklyUsage = normalizeUsageWindow(parsedUsage?.weekly);
-    const accountData = normalizeAccountData(parsedUsage?.account);
-    const planData = normalizePlanData(parsedUsage?.plan);
-
-    if (!sessionUsage || !weeklyUsage) {
-      return {
-        status: 'parse_error',
-        error: {
-          code: 'usage_not_found',
-          message: 'Ollama settings page did not include both session and weekly usage windows',
-        },
-      };
-    }
-
-    const missingFields = [];
-    if (!accountData.username) {
-      missingFields.push('account_data.username');
-    }
-    if (!accountData.email) {
-      missingFields.push('account_data.email');
-    }
-    if (!planData.type) {
-      missingFields.push('plan_data.type');
-    }
-
-    if (missingFields.length) {
-      return {
-        status: 'parse_error',
-        error: {
-          code: 'profile_fields_not_found',
-          message: `Ollama settings page did not include ${missingFields.join(', ')}`,
-        },
-      };
-    }
-
-    return {
-      status: 'ok',
-      payload: {
-        account_data: accountData,
-        plan_data: planData,
-        provider_data: {
-          session_usage: sessionUsage,
-          weekly_usage: weeklyUsage,
-        },
+      status: 'parse_error',
+      error: {
+        code: 'page_html_unavailable',
+        message: 'Ollama settings page HTML was unavailable',
       },
     };
   }
 
-  function normalizeUsageWindow(windowUsage) {
-    const usedPercent = toNumber(windowUsage?.used_percent);
-    const resetAt = normalizeDate(windowUsage?.reset_at);
-
-    if (!Number.isFinite(usedPercent) || !resetAt) {
-      return null;
+  const sourceControls = Array.from(document.querySelectorAll('input, textarea, select'));
+  const serializedControls = Array.from(page.querySelectorAll('input, textarea, select'));
+  sourceControls.forEach((control, index) => {
+    const serializedControl = serializedControls[index];
+    if (!serializedControl || !('value' in control)) {
+      return;
     }
 
-    return {
-      used_percent: usedPercent,
-      reset_at: resetAt,
-    };
-  }
-
-  function normalizeAccountData(account) {
-    return pruneEmpty({
-      username: normalizeUsername(account?.username),
-      email: findEmail(account?.email),
-    });
-  }
-
-  function normalizePlanData(plan) {
-    return pruneEmpty({
-      type: normalizePlanType(plan?.type),
-    });
-  }
-
-  function normalizeUsername(value) {
-    const cleaned = cleanTextValue(value).replace(/^@/, '');
-    if (!cleaned || cleaned.includes('@')) {
-      return undefined;
+    serializedControl.setAttribute('value', control.value);
+    if (serializedControl.tagName === 'TEXTAREA') {
+      serializedControl.textContent = control.value;
     }
+  });
 
-    const match = /[a-z0-9](?:[a-z0-9._-]{0,62}[a-z0-9])?/i.exec(cleaned);
-    const username = match?.[0];
-    return /^(change|edit|save|update|delete|settings|profile|account)$/i.test(username || '') ? undefined : username;
-  }
-
-  function normalizePlanType(value) {
-    const match = /\b(free|pro|team|enterprise)\b/i.exec(cleanTextValue(value));
-    return match?.[1]?.toLowerCase();
-  }
-
-  function findEmail(value) {
-    const match = /[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i.exec(String(value || ''));
-    return match?.[0];
-  }
-
-  function findPlan(value) {
-    const labeledPlan = findValueNearLabel(value, ['plan', 'current plan', 'subscription']);
-    return labeledPlan || /\b(free|pro|team|enterprise)\b/i.exec(String(value || ''))?.[1];
-  }
-
-  function findValueNearLabel(value, labels) {
-    const lines = String(value || '')
-      .split(/\n+/)
-      .map((line) => cleanTextValue(line))
-      .filter(Boolean);
-
-    for (let index = 0; index < lines.length; index += 1) {
-      const line = lines[index];
-      for (const label of labels) {
-        const pattern = new RegExp(`^${escapeRegExp(label)}\\s*:?\\s*(.*)$`, 'i');
-        const match = pattern.exec(line);
-        if (!match) {
-          continue;
-        }
-
-        if (match[1] && !isGenericLabel(match[1])) {
-          return match[1];
-        }
-
-        for (let offset = 1; offset <= 3; offset += 1) {
-          const candidate = lines[index + offset];
-          if (candidate && !isGenericLabel(candidate)) {
-            return candidate;
-          }
-        }
-      }
-    }
-
-    return undefined;
-  }
-
-  function cleanTextValue(value) {
-    return String(value || '').replace(/\s+/g, ' ').trim();
-  }
-
-  function isGenericLabel(value) {
-    return /^(username|user name|handle|email|plan|current plan|subscription|session usage|weekly usage)$/i.test(cleanTextValue(value));
-  }
-
-  function normalizeLoose(value) {
-    return String(value || '').toLowerCase().replace(/[^a-z0-9]+/g, '');
-  }
-
-  function pruneEmpty(object) {
-    return Object.fromEntries(
-      Object.entries(object).filter(([, value]) => value !== undefined && value !== null && value !== ''),
-    );
-  }
-
-  function escapeRegExp(value) {
-    return String(value).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  }
+  return {
+    status: 'ok',
+    html: page.outerHTML,
+  };
 }
 
 export function parseOllamaSettingsUsageFromHtml(html) {
@@ -568,30 +361,30 @@ function findPlan(value) {
 
 function htmlToText(html) {
   return decodeHtmlEntities(String(html || '')
-    .replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, '\n')
-    .replace(/<style\b[^>]*>[\s\S]*?<\/style>/gi, '\n')
-    .replace(/<[^>]+>/g, '\n'))
-    .replace(/\n{2,}/g, '\n')
+    .replaceAll(/<script\b[^>]*>[\s\S]*?<\/script>/gi, '\n')
+    .replaceAll(/<style\b[^>]*>[\s\S]*?<\/style>/gi, '\n')
+    .replaceAll(/<[^>]+>/g, '\n'))
+    .replaceAll(/\n{2,}/g, '\n')
     .trim();
 }
 
 function stripHtml(value) {
-  return String(value || '').replace(/<[^>]+>/g, ' ');
+  return String(value || '').replaceAll(/<[^>]+>/g, ' ');
 }
 
 function decodeHtmlEntities(value) {
   return String(value || '')
-    .replace(/&quot;/g, '"')
-    .replace(/&#34;/g, '"')
-    .replace(/&#x22;/gi, '"')
-    .replace(/&apos;/g, "'")
-    .replace(/&#39;/g, "'")
-    .replace(/&#x27;/gi, "'")
-    .replace(/&amp;/g, '&')
-    .replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>')
-    .replace(/&#(\d+);/g, (_match, code) => String.fromCodePoint(Number(code)))
-    .replace(/&#x([0-9a-f]+);/gi, (_match, code) => String.fromCodePoint(Number.parseInt(code, 16)));
+    .replaceAll(/&quot;/g, '"')
+    .replaceAll(/&#34;/g, '"')
+    .replaceAll(/&#x22;/gi, '"')
+    .replaceAll(/&apos;/g, "'")
+    .replaceAll(/&#39;/g, "'")
+    .replaceAll(/&#x27;/gi, "'")
+    .replaceAll(/&amp;/g, '&')
+    .replaceAll(/&lt;/g, '<')
+    .replaceAll(/&gt;/g, '>')
+    .replaceAll(/&#(\d+);/g, (_match, code) => String.fromCodePoint(Number(code)))
+    .replaceAll(/&#x([0-9a-f]+);/gi, (_match, code) => String.fromCodePoint(Number.parseInt(code, 16)));
 }
 
 function getAttributeFromTag(tag, name) {
@@ -600,7 +393,7 @@ function getAttributeFromTag(tag, name) {
 }
 
 function cleanTextValue(value) {
-  return String(value || '').replace(/\s+/g, ' ').trim();
+  return String(value || '').replaceAll(/\s+/g, ' ').trim();
 }
 
 function isGenericLabel(value) {
@@ -608,7 +401,7 @@ function isGenericLabel(value) {
 }
 
 function normalizeLoose(value) {
-  return String(value || '').toLowerCase().replace(/[^a-z0-9]+/g, '');
+  return String(value || '').toLowerCase().replaceAll(/[^a-z0-9]+/g, '');
 }
 
 function pruneEmpty(object) {

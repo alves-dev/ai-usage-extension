@@ -51,8 +51,12 @@ export async function runPageProbe(url, scraperFunction) {
     if (tab?.id !== undefined) {
       try {
         await tabsRemove(tab.id);
-      } catch (_error) {
+      } catch (error) {
         // The user may have closed the tab before the probe finished.
+        console.debug('Unable to close temporary provider tab', {
+          tabId: tab.id,
+          message: error.message,
+        });
       }
     }
   }
@@ -92,7 +96,10 @@ function looksLikeAuthenticationUrl(url) {
     const parsed = new URL(url);
     const haystack = `${parsed.hostname}${parsed.pathname}`.toLowerCase();
     return /auth|oauth|login|signin|sign-in/.test(haystack);
-  } catch (_error) {
+  } catch (error) {
+    console.debug('Provider authentication URL could not be parsed', {
+      message: error.message,
+    });
     return false;
   }
 }

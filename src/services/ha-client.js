@@ -34,7 +34,7 @@ export function normalizeWebhookId(value) {
   return withoutUrl
     .replace(/^\/+/, '')
     .replace(new RegExp(`^${WEBHOOK_PATH_PREFIX}`, 'i'), '')
-    .replace(/^\/+|\/+$/g, '');
+    .replaceAll(/^\/+|\/+$/g, '');
 }
 
 export function permissionForWebhook(homeAssistantConfig) {

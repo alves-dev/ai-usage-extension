@@ -173,7 +173,7 @@ export function extractUsageFromJson(data) {
 }
 
 export function extractUsageFromText(text) {
-  const safeText = String(text || '').replace(/\s+/g, ' ').trim();
+  const safeText = String(text || '').replaceAll(/\s+/g, ' ').trim();
   const usage = {};
 
   usage.remaining =
@@ -211,7 +211,7 @@ export function toNumber(value) {
     return undefined;
   }
 
-  const match = value.replace(/,/g, '').match(/-?\d+(\.\d+)?/);
+  const match = value.replaceAll(/,/g, '').match(/-?\d+(\.\d+)?/);
   if (!match) {
     return undefined;
   }
@@ -244,39 +244,14 @@ function extractUsageCandidate(node, path) {
   let unitHint = '';
 
   for (const [key, value] of Object.entries(node)) {
-    const normalizedKey = normalizeKey(key);
-    const numeric = toNumber(value);
-
-    if (numeric !== undefined && keyMatches(normalizedKey, USED_KEYS)) {
-      usage.used = numeric;
-      score += 4;
-      unitHint += ` ${normalizedKey}`;
+    const field = extractUsageField(key, value);
+    if (!field) {
+      continue;
     }
 
-    if (numeric !== undefined && keyMatches(normalizedKey, LIMIT_KEYS)) {
-      usage.limit = numeric;
-      score += 4;
-      unitHint += ` ${normalizedKey}`;
-    }
-
-    if (numeric !== undefined && keyMatches(normalizedKey, REMAINING_KEYS)) {
-      usage.remaining = numeric;
-      score += 4;
-      unitHint += ` ${normalizedKey}`;
-    }
-
-    if (keyMatches(normalizedKey, RESET_KEYS)) {
-      const resetAt = normalizeDateLike(value);
-      if (resetAt) {
-        usage.reset_at = resetAt;
-        score += 2;
-      }
-    }
-
-    if (normalizedKey === 'unit' && typeof value === 'string') {
-      usage.unit = value;
-      score += 1;
-    }
+    usage[field.name] = field.value;
+    score += field.score;
+    unitHint += field.unitHint || '';
   }
 
   const pathHint = path.join(' ');
@@ -287,6 +262,41 @@ function extractUsageCandidate(node, path) {
   }
 
   return { score, usage };
+}
+
+function extractUsageField(key, value) {
+  const normalizedKey = normalizeKey(key);
+  const numeric = toNumber(value);
+
+  if (numeric !== undefined) {
+    const numericFields = [
+      ['used', USED_KEYS],
+      ['limit', LIMIT_KEYS],
+      ['remaining', REMAINING_KEYS],
+    ];
+    const match = numericFields.find(([, candidates]) => keyMatches(normalizedKey, candidates));
+    if (match) {
+      return {
+        name: match[0],
+        value: numeric,
+        score: 4,
+        unitHint: ` ${normalizedKey}`,
+      };
+    }
+  }
+
+  if (keyMatches(normalizedKey, RESET_KEYS)) {
+    const resetAt = normalizeDateLike(value);
+    if (resetAt) {
+      return { name: 'reset_at', value: resetAt, score: 2 };
+    }
+  }
+
+  if (normalizedKey === 'unit' && typeof value === 'string') {
+    return { name: 'unit', value, score: 1 };
+  }
+
+  return null;
 }
 
 function extractAccount(node) {
@@ -332,7 +342,7 @@ function walkObjects(value, callback, path = []) {
 }
 
 function normalizeKey(key) {
-  return String(key).replace(/[A-Z]/g, (letter) => `_${letter.toLowerCase()}`).toLowerCase();
+  return String(key).replaceAll(/[A-Z]/g, (letter) => `_${letter.toLowerCase()}`).toLowerCase();
 }
 
 function keyMatches(key, candidates) {
