@@ -1,6 +1,8 @@
 const CODEX_USAGE_ENDPOINT = 'https://chatgpt.com/backend-api/wham/usage';
 const CODEX_SESSION_ENDPOINT = 'https://chatgpt.com/api/auth/session';
 const CODEX_USAGE_PAGE = 'https://chatgpt.com/codex/cloud/settings/analytics';
+const FIVE_HOUR_WINDOW_SECONDS = 18_000;
+const WEEKLY_WINDOW_SECONDS = 604_800;
 
 export async function collectCodex(_settings, context) {
   const directResult = await fetchCodexUsage({
@@ -199,10 +201,35 @@ async function fetchCodexUsageFromPage() {
           type: data.plan_type,
         },
         provider_data: {
-          rate_limit: data.rate_limit,
+          rate_limit: normalizeRateLimit(data.rate_limit),
         },
       },
     };
+  }
+
+  function normalizeRateLimit(rateLimit) {
+    const normalized = {
+      allowed: rateLimit.allowed,
+      limit_reached: rateLimit.limit_reached,
+      five_hour_window: null,
+      weekly_window: null,
+    };
+
+    for (const window of [rateLimit.primary_window, rateLimit.secondary_window]) {
+      if (!window) {
+        continue;
+      }
+
+      if (window.limit_window_seconds === 18000) {
+        normalized.five_hour_window = window;
+      } else if (window.limit_window_seconds === 604800) {
+        normalized.weekly_window = window;
+      } else {
+        console.warn('Codex returned an unknown rate-limit window duration', window.limit_window_seconds);
+      }
+    }
+
+    return normalized;
   }
 
   function mapHttpError(status, resourceName) {
@@ -279,11 +306,36 @@ function buildCodexResult(data) {
       plan_data: {
         type: data.plan_type,
       },
-      provider_data: pruneEmpty({
-        rate_limit: data.rate_limit,
-      }),
+      provider_data: {
+        rate_limit: normalizeCodexRateLimit(data.rate_limit),
+      },
     },
   };
+}
+
+export function normalizeCodexRateLimit(rateLimit) {
+  const normalized = {
+    allowed: rateLimit.allowed,
+    limit_reached: rateLimit.limit_reached,
+    five_hour_window: null,
+    weekly_window: null,
+  };
+
+  for (const window of [rateLimit.primary_window, rateLimit.secondary_window]) {
+    if (!window) {
+      continue;
+    }
+
+    if (window.limit_window_seconds === FIVE_HOUR_WINDOW_SECONDS) {
+      normalized.five_hour_window = window;
+    } else if (window.limit_window_seconds === WEEKLY_WINDOW_SECONDS) {
+      normalized.weekly_window = window;
+    } else {
+      console.warn('Codex returned an unknown rate-limit window duration', window.limit_window_seconds);
+    }
+  }
+
+  return normalized;
 }
 
 function mapCodexHttpError(status, resourceName) {

@@ -3,6 +3,7 @@
   "type": "module",
   "scripts": {
     "check": "npm run check:js",
-    "check:js": "find src -name '*.js' -print0 | xargs -0 -n1 node --check"
+    "check:js": "find src -name '*.js' -print0 | xargs -0 -n1 node --check",
+    "test": "node --test"
   }
 }

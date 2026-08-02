@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "AI Usage Collector",
   "description": "Collects AI provider usage from authenticated browser sessions and sends structured payloads to Home Assistant.",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "options_page": "src/options/options.html",
   "action": {
     "default_title": "AI Usage"

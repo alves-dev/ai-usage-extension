@@ -44,7 +44,7 @@ Payload esperado pela integração Home Assistant para esta versão:
 
 ```json
 {
-  "schema_version": "1.0",
+  "schema_version": "1.1",
   "source": "browser_extension",
   "source_version": "0.1.0",
   "collected_at": "2026-06-02T15:40:00.000Z",
@@ -62,13 +62,13 @@ Payload esperado pela integração Home Assistant para esta versão:
     "rate_limit": {
       "allowed": true,
       "limit_reached": false,
-      "primary_window": {
+      "five_hour_window": {
         "used_percent": 1,
         "limit_window_seconds": 18000,
         "reset_after_seconds": 18000,
         "reset_at": 1780434415
       },
-      "secondary_window": {
+      "weekly_window": {
         "used_percent": 18,
         "limit_window_seconds": 604800,
         "reset_after_seconds": 429815,

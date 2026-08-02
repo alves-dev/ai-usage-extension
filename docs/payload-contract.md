@@ -1,8 +1,8 @@
 # Payload Contract
 
-Este documento define o contrato esperado pela integracao Home Assistant.
+Este documento define o contrato esperado pela integração Home Assistant.
 
-A integracao e a autoridade do contrato. Qualquer source que envie dados, incluindo a extensao de navegador, deve adaptar o payload para este formato antes de chamar o webhook.
+A integração e a autoridade do contrato. Qualquer source que envie dados, incluindo a extensao de navegador, deve adaptar o payload para este formato antes de chamar o webhook.
 
 ## Contrato Base
 
@@ -10,7 +10,7 @@ Todo payload enviado ao Home Assistant deve usar este envelope:
 
 ```json
 {
-  "schema_version": "1.0",
+  "schema_version": "1.1",
   "source": "browser_extension",
   "source_version": "0.1.0",
   "collected_at": "2026-05-30T15:40:00.000Z",
@@ -32,7 +32,7 @@ Versao do contrato do payload.
 Valor atual:
 
 ```text
-1.0
+1.1
 ```
 
 ### `source`
@@ -182,13 +182,13 @@ Formato esperado:
 {
   "allowed": true,
   "limit_reached": false,
-  "primary_window": {
+  "five_hour_window": {
     "used_percent": 15,
     "limit_window_seconds": 18000,
     "reset_after_seconds": 17706,
     "reset_at": 1780434990
   },
-  "secondary_window": {
+  "weekly_window": {
     "used_percent": 21,
     "limit_window_seconds": 604800,
     "reset_after_seconds": 428946,
@@ -201,13 +201,16 @@ Observacoes:
 
 - `reset_at` dentro de `rate_limit` usa Unix epoch seconds, conforme retornado pelo Codex.
 - `used_percent` e numerico e representa percentual ja usado na janela.
-- `primary_window` e `secondary_window` sao janelas do provider; a integracao deve tratar o significado delas como especifico do Codex.
+- `five_hour_window` e a janela do limite de 5 horas do Codex, ou `null` quando ela nao for fornecida.
+- `weekly_window` e a janela do limite semanal do Codex, ou `null` quando ela nao for fornecida.
+- Os dois campos devem sempre estar presentes. A ausencia de uma janela nao autoriza copiar os dados da outra.
+- O collector deve classificar as janelas pela duracao (`18000` para 5 horas e `604800` para semanal), nunca pelos nomes `primary` ou `secondary` do response do Codex.
 
 ### Exemplo Codex
 
 ```json
 {
-  "schema_version": "1.0",
+  "schema_version": "1.1",
   "source": "browser_extension",
   "source_version": "0.1.0",
   "collected_at": "2026-06-02T15:40:00.000Z",
@@ -225,13 +228,13 @@ Observacoes:
     "rate_limit": {
       "allowed": true,
       "limit_reached": false,
-      "primary_window": {
+      "five_hour_window": {
         "used_percent": 1,
         "limit_window_seconds": 18000,
         "reset_after_seconds": 18000,
         "reset_at": 1780434415
       },
-      "secondary_window": {
+      "weekly_window": {
         "used_percent": 18,
         "limit_window_seconds": 604800,
         "reset_after_seconds": 429815,
@@ -307,7 +310,7 @@ Observacoes:
 
 ```json
 {
-  "schema_version": "1.0",
+  "schema_version": "1.1",
   "source": "browser_extension",
   "source_version": "0.1.0",
   "collected_at": "2026-06-02T15:40:00.000Z",
@@ -338,7 +341,7 @@ Observacoes:
 
 ```json
 {
-  "schema_version": "1.0",
+  "schema_version": "1.1",
   "source": "browser_extension",
   "source_version": "0.1.0",
   "collected_at": "2026-06-02T15:40:00.000Z",

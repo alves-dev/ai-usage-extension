@@ -1,5 +1,5 @@
 export const EXTENSION_SOURCE = 'browser_extension';
-export const PAYLOAD_SCHEMA_VERSION = '1.0';
+export const PAYLOAD_SCHEMA_VERSION = '1.1';
 
 export const PROVIDER_ORDER = ['codex', 'ollama_cloud'];
 

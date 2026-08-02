@@ -23,7 +23,7 @@ Each provider can be enabled or disabled independently on the options page, with
 
 ## Options Page
 
-![AI Usage Collector options page](docs/options-page.png)
+![AI Usage Collector options page](docs/images/options-page.png)
 
 ## Home Assistant Configuration
 
