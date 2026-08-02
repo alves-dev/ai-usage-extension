@@ -230,7 +230,7 @@ function findOllamaUsernameFromHtml(html) {
     const username = normalizeUsername(text || pathMatch?.[1]);
     const normalizedPathUsername = pathMatch?.[1]?.toLowerCase();
 
-    if (username && normalizedPathUsername === username.toLowerCase()) {
+    if (normalizedPathUsername && username?.toLowerCase() === normalizedPathUsername) {
       return username;
     }
   }

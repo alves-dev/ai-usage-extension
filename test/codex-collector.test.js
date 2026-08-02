@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { normalizeCodexRateLimit } from '../src/providers/codex.js';
+import { collectCodex, normalizeCodexRateLimit } from '../src/providers/codex.js';
 
 const fiveHourWindow = {
   used_percent: 10,
@@ -81,4 +81,52 @@ test('preserves usage and reset values', () => {
   assert.equal(result.weekly_window.used_percent, 59);
   assert.equal(result.weekly_window.reset_after_seconds, 69577);
   assert.equal(result.weekly_window.reset_at, 1780310621);
+});
+
+test('collects Codex usage directly with an access token', async () => {
+  const originalFetch = globalThis.fetch;
+  let request = 0;
+  globalThis.fetch = async () => {
+    request += 1;
+    if (request === 1) {
+      return new Response(JSON.stringify({ accessToken: 'token' }), { status: 200 });
+    }
+    return new Response(JSON.stringify({
+      email: 'user@example.com',
+      plan_type: 'pro',
+      rate_limit: rateLimit(fiveHourWindow, weeklyWindow),
+    }), { status: 200 });
+  };
+  try {
+    const result = await collectCodex({}, {});
+    assert.equal(result.status, 'ok');
+    assert.equal(result.payload.account_data.email, 'user@example.com');
+    assert.equal(result.payload.provider_data.rate_limit.five_hour_window.used_percent, 10);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test('falls back to the page probe when direct Codex access is unavailable', async () => {
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async () => new Response('unauthorized', { status: 401 });
+  try {
+    const result = await collectCodex({}, {
+      runPageProbe: async (_url, callback) => callback(),
+    });
+    assert.equal(result.status, 'not_authenticated');
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test('returns parse errors for incomplete Codex responses and maps HTTP errors', async () => {
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async () => new Response(JSON.stringify({ accessToken: 'token' }), { status: 200 });
+  try {
+    const result = await collectCodex({}, {});
+    assert.equal(result.status, 'parse_error');
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
 });
