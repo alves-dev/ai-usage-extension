@@ -147,21 +147,22 @@ async function fetchCodexUsageFromPage() {
     };
   }
 
-  function mapPageHttpError(status, resourceName) {
-    const statusMap = {
-      401: 'not_authenticated',
-      403: 'not_authenticated',
-      429: 'rate_limited',
-    };
-    const resultStatus = statusMap[status] || 'provider_unavailable';
-    return {
-      status: resultStatus,
-      error: {
-        code: resultStatus,
-        message: `${resourceName} returned HTTP ${status}`,
-      },
-    };
-  }
+}
+
+function mapPageHttpError(status, resourceName) {
+  const statusMap = {
+    401: 'not_authenticated',
+    403: 'not_authenticated',
+    429: 'rate_limited',
+  };
+  const resultStatus = statusMap[status] || 'provider_unavailable';
+  return {
+    status: resultStatus,
+    error: {
+      code: resultStatus,
+      message: `${resourceName} returned HTTP ${status}`,
+    },
+  };
 }
 
 function buildCodexResult(data) {

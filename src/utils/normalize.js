@@ -211,7 +211,7 @@ export function toNumber(value) {
     return undefined;
   }
 
-  const match = value.replaceAll(/,/g, '').match(/-?\d+(\.\d+)?/);
+  const match = /-?\d+(\.\d+)?/.exec(value.replaceAll(',', ''));
   if (!match) {
     return undefined;
   }
@@ -385,12 +385,12 @@ function inferUnitFromText(text) {
 
 function findNumberNear(text, labels) {
   for (const label of labels) {
-    const after = new RegExp(`${label}[^0-9$-]{0,40}([$]?\\d[\\d,.]*)`, 'i').exec(text);
+    const after = new RegExp(String.raw`${label}[^0-9$-]{0,40}([$]?\d[\d,.]*)`, 'i').exec(text);
     if (after) {
       return toNumber(after[1]);
     }
 
-    const before = new RegExp(`([$]?\\d[\\d,.]*)[^a-zA-Z0-9]{0,20}${label}`, 'i').exec(text);
+    const before = new RegExp(String.raw`([$]?\d[\d,.]*)[^a-zA-Z0-9]{0,20}${label}`, 'i').exec(text);
     if (before) {
       return toNumber(before[1]);
     }
@@ -401,7 +401,7 @@ function findNumberNear(text, labels) {
 
 function findPercentNear(text, labels) {
   for (const label of labels) {
-    const pattern = new RegExp(`(\\d+(?:\\.\\d+)?)\\s*%[^a-zA-Z0-9]{0,20}${label}`, 'i');
+    const pattern = new RegExp(String.raw`(\d+(?:\.\d+)?)\s*%[^a-zA-Z0-9]{0,20}${label}`, 'i');
     const match = pattern.exec(text);
     if (match) {
       return toNumber(match[1]);

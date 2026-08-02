@@ -23,9 +23,11 @@ elements.extensionVersion.textContent = `Version ${chrome.runtime.getManifest().
 elements.saveButton.addEventListener('click', saveOptions);
 elements.testHaButton.addEventListener('click', testHomeAssistant);
 
-loadAndRender().catch((error) => {
+try {
+  await loadAndRender();
+} catch (error) {
   elements.haError.textContent = error.message;
-});
+}
 
 async function loadAndRender() {
   currentConfig = await getConfig();

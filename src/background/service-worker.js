@@ -154,4 +154,8 @@ async function testHomeAssistantConnection() {
   };
 }
 
-initialize().catch(console.error);
+try {
+  await initialize();
+} catch (error) {
+  console.error(error);
+}

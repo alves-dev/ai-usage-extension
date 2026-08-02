@@ -133,7 +133,7 @@ function parseUsageBlock(html, label) {
 }
 
 function findUsedPercent(block, label) {
-  const ariaPattern = new RegExp(`aria-label=["']${escapeRegExp(label)}\\s+(\\d+(?:[,.]\\d+)?)%\\s+used["']`, 'i');
+  const ariaPattern = new RegExp(String.raw`aria-label=["']${escapeRegExp(label)}\s+(\d+(?:[,.]\d+)?)%\s+used["']`, 'i');
   const ariaMatch = ariaPattern.exec(block);
   if (ariaMatch) {
     return toNumber(ariaMatch[1]);
@@ -308,7 +308,7 @@ function findInputValue(html, labels) {
 function findJsonValue(html, keys) {
   const decoded = decodeHtmlEntities(html);
   for (const key of keys) {
-    const pattern = new RegExp(`["']${escapeRegExp(key)}["']\\s*:\\s*["']([^"']+)["']`, 'i');
+    const pattern = new RegExp(String.raw`["']${escapeRegExp(key)}["']\s*:\s*["']([^"']+)["']`, 'i');
     const match = pattern.exec(decoded);
     if (match?.[1]) {
       return match[1];
@@ -327,7 +327,7 @@ function findValueNearLabel(value, labels) {
   for (let index = 0; index < lines.length; index += 1) {
     const line = lines[index];
     for (const label of labels) {
-      const pattern = new RegExp(`^${escapeRegExp(label)}\\s*:?\\s*(.*)$`, 'i');
+      const pattern = new RegExp(String.raw`^${escapeRegExp(label)}\s*:?\s*(.*)$`, 'i');
       const match = pattern.exec(line);
       if (!match) {
         continue;
@@ -337,15 +337,23 @@ function findValueNearLabel(value, labels) {
         return match[1];
       }
 
-      for (let offset = 1; offset <= 3; offset += 1) {
-        const candidate = lines[index + offset];
-        if (candidate && !isGenericLabel(candidate)) {
-          return candidate;
-        }
+      const candidate = findValueAfterLabel(lines, index);
+      if (candidate) {
+        return candidate;
       }
     }
   }
 
+  return undefined;
+}
+
+function findValueAfterLabel(lines, index) {
+  for (let offset = 1; offset <= 3; offset += 1) {
+    const candidate = lines[index + offset];
+    if (candidate && !isGenericLabel(candidate)) {
+      return candidate;
+    }
+  }
   return undefined;
 }
 
@@ -374,21 +382,21 @@ function stripHtml(value) {
 
 function decodeHtmlEntities(value) {
   return String(value || '')
-    .replaceAll(/&quot;/g, '"')
-    .replaceAll(/&#34;/g, '"')
+    .replaceAll('&quot;', '"')
+    .replaceAll('&#34;', '"')
     .replaceAll(/&#x22;/gi, '"')
-    .replaceAll(/&apos;/g, "'")
-    .replaceAll(/&#39;/g, "'")
+    .replaceAll('&apos;', "'")
+    .replaceAll('&#39;', "'")
     .replaceAll(/&#x27;/gi, "'")
-    .replaceAll(/&amp;/g, '&')
-    .replaceAll(/&lt;/g, '<')
-    .replaceAll(/&gt;/g, '>')
+    .replaceAll('&amp;', '&')
+    .replaceAll('&lt;', '<')
+    .replaceAll('&gt;', '>')
     .replaceAll(/&#(\d+);/g, (_match, code) => String.fromCodePoint(Number(code)))
     .replaceAll(/&#x([0-9a-f]+);/gi, (_match, code) => String.fromCodePoint(Number.parseInt(code, 16)));
 }
 
 function getAttributeFromTag(tag, name) {
-  const pattern = new RegExp(`\\b${escapeRegExp(name)}\\s*=\\s*(["'])(.*?)\\1`, 'i');
+  const pattern = new RegExp(String.raw`\b${escapeRegExp(name)}\s*=\s*(["'])(.*?)\1`, 'i');
   return pattern.exec(tag)?.[2];
 }
 
@@ -462,5 +470,5 @@ function toNumber(value) {
 }
 
 function escapeRegExp(value) {
-  return String(value).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  return String(value).replaceAll(/[.*+?^${}()|[\]\\]/g, String.raw`\$&`);
 }
