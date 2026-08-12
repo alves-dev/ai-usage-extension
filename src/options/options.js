@@ -72,6 +72,20 @@ function renderProviders() {
     setStatusPill(fragment.querySelector('.provider-status'), providerState.lastStatus);
     testButton.disabled = !providerConfig.enabled;
 
+    const windowLabelList = fragment.querySelector('.window-label-list');
+    for (const window of provider.windows) {
+      const label = document.createElement('label');
+      const title = document.createElement('span');
+      title.textContent = window.label;
+      const input = document.createElement('input');
+      input.className = 'window-label';
+      input.dataset.windowId = window.id;
+      input.type = 'text';
+      input.value = providerConfig.windowLabels?.[window.id] || window.label;
+      label.append(title, input);
+      windowLabelList.append(label);
+    }
+
     enabledInput.addEventListener('change', () => {
       card.classList.toggle('is-disabled', !enabledInput.checked);
       testButton.disabled = !enabledInput.checked;
@@ -173,6 +187,7 @@ function readConfigFromForm() {
     providers[providerId] = {
       enabled: card.querySelector('.provider-enabled').checked,
       intervalMinutes: Number(card.querySelector('.provider-interval').value || PROVIDERS[providerId].defaultIntervalMinutes),
+      windowLabels: Object.fromEntries([...card.querySelectorAll('.window-label')].map((input) => [input.dataset.windowId, input.value.trim()])),
     };
   }
 

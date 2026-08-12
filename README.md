@@ -1,5 +1,7 @@
 # AI Usage Collector
 
+Versão atual: `2026.8.0`.
+
 [![Quality Gate Status](https://sonar.alves-dev.com/api/project_badges/measure?project=ai-usage-extension&metric=alert_status&token=sqb_3ab8842cf3278deb2395148a69098b74d0b33edf)](https://sonar.alves-dev.com/dashboard?id=ai-usage-extension)
 [![Coverage](https://sonar.alves-dev.com/api/project_badges/measure?project=ai-usage-extension&metric=coverage&token=sqb_3ab8842cf3278deb2395148a69098b74d0b33edf)](https://sonar.alves-dev.com/dashboard?id=ai-usage-extension)
 [![Security Hotspots](https://sonar.alves-dev.com/api/project_badges/measure?project=ai-usage-extension&metric=security_hotspots&token=sqb_3ab8842cf3278deb2395148a69098b74d0b33edf)](https://sonar.alves-dev.com/dashboard?id=ai-usage-extension)
@@ -19,7 +21,7 @@ After each collection, the payload is sent with `POST` to the configured Home As
 - **Codex**: collects plan and usage limit data for Codex Cloud on `chatgpt.com`.
 - **Ollama Cloud**: collects account, plan, and usage limit data from the Ollama Cloud settings page.
 
-Each provider can be enabled or disabled independently on the options page, with a configurable collection interval in minutes.
+Each provider can be enabled or disabled independently on the options page, with a configurable collection interval in minutes. The labels of each usage window can also be customized; the technical window IDs remain stable.
 
 ## Options Page
 
@@ -64,9 +66,14 @@ Available command:
 
 ```bash
 npm run check
+npm test
 ```
 
 This runs `node --check` for every JavaScript file in `src/`.
+
+Releases use the calendar version in `manifest.json` (`YYYY.M` or `YYYY.M.P`).
+For this release, the Payload Contract is `2.0` and the extension version is
+`2026.8.0`.
 
 ## Documentation
 

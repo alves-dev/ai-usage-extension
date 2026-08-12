@@ -1,19 +1,19 @@
 const OLLAMA_SETTINGS_URL = 'https://ollama.com/settings';
 
-export async function collectOllamaCloud(_settings, context) {
-  const directResult = await fetchOllamaSettingsUsage();
+export async function collectOllamaCloud(settings = {}, context) {
+  const directResult = await fetchOllamaSettingsUsage(settings);
   if (directResult.status === 'ok' || !context?.runPageProbe) {
     return directResult;
   }
 
   const probeResult = await context.runPageProbe(OLLAMA_SETTINGS_URL, scrapeOllamaSettingsPage);
   if (probeResult?.status === 'ok' && probeResult.html) {
-    return buildResultFromParsedUsage(parseOllamaSettingsUsageFromHtml(probeResult.html));
+    return buildResultFromParsedUsage(parseOllamaSettingsUsageFromHtml(probeResult.html), settings);
   }
   return probeResult || directResult;
 }
 
-async function fetchOllamaSettingsUsage() {
+async function fetchOllamaSettingsUsage(settings = {}) {
   try {
     const response = await fetch(OLLAMA_SETTINGS_URL, {
       credentials: 'include',
@@ -52,7 +52,7 @@ async function fetchOllamaSettingsUsage() {
       return unauthenticated('Ollama settings page requires login');
     }
 
-    return buildResultFromParsedUsage(parseOllamaSettingsUsageFromHtml(html));
+    return buildResultFromParsedUsage(parseOllamaSettingsUsageFromHtml(html), settings);
   } catch (error) {
     return {
       status: 'provider_unavailable',
@@ -148,31 +148,28 @@ function findResetAt(block) {
   return normalizeDate(dataTimeMatch?.[1]);
 }
 
-function buildResultFromParsedUsage(parsedUsage) {
-  const sessionUsage = normalizeUsageWindow(parsedUsage?.session);
-  const weeklyUsage = normalizeUsageWindow(parsedUsage?.weekly);
+function buildResultFromParsedUsage(parsedUsage, settings = {}) {
+  const sessionUsage = normalizeUsageWindow(parsedUsage?.session, 'session', 18_000, settings.windowLabels?.session || 'Session window');
+  const weeklyUsage = normalizeUsageWindow(parsedUsage?.weekly, 'weekly', 604_800, settings.windowLabels?.weekly || 'Weekly window');
   const accountData = normalizeAccountData(parsedUsage?.account);
   const planData = normalizePlanData(parsedUsage?.plan);
 
-  if (!sessionUsage || !weeklyUsage) {
+  if (!sessionUsage && !weeklyUsage) {
     return {
       status: 'parse_error',
       error: {
         code: 'usage_not_found',
-        message: 'Ollama settings page did not include both session and weekly usage windows',
+        message: 'Ollama settings page did not include a valid usage window',
       },
     };
   }
 
   const missingFields = [];
-  if (!accountData.username) {
-    missingFields.push('account_data.username');
-  }
-  if (!accountData.email) {
-    missingFields.push('account_data.email');
+  if (!accountData.username && !accountData.email) {
+    missingFields.push('account_data.id source');
   }
   if (!planData.type) {
-    missingFields.push('plan_data.type');
+    missingFields.push('account_data.plan.type');
   }
 
   if (missingFields.length) {
@@ -188,12 +185,13 @@ function buildResultFromParsedUsage(parsedUsage) {
   return {
     status: 'ok',
     payload: {
-      account_data: accountData,
-      plan_data: planData,
-      provider_data: {
-        session_usage: sessionUsage,
-        weekly_usage: weeklyUsage,
+      account_data: {
+        ...accountData,
+        id: `ollama_${stableHash(accountData.username || accountData.email || 'unknown')}`,
+        id_kind: 'collector_generated_hash',
+        plan: planData,
       },
+      usage_data: { windows: [sessionUsage, weeklyUsage].filter(Boolean) },
     },
   };
 }
@@ -419,7 +417,7 @@ function pruneEmpty(object) {
   );
 }
 
-function normalizeUsageWindow(windowUsage) {
+function normalizeUsageWindow(windowUsage, id, durationSeconds, label) {
   const usedPercent = toNumber(windowUsage?.used_percent);
   const resetAt = normalizeDate(windowUsage?.reset_at);
 
@@ -428,9 +426,22 @@ function normalizeUsageWindow(windowUsage) {
   }
 
   return {
+    id,
+    label,
+    duration_seconds: durationSeconds,
     used_percent: usedPercent,
     reset_at: resetAt,
+    limit_reached: usedPercent >= 100,
   };
+}
+
+function stableHash(value) {
+  let hash = 2_166_136_261;
+  for (const character of String(value)) {
+    hash ^= character.codePointAt(0);
+    hash = Math.imul(hash, 16_777_619);
+  }
+  return (hash >>> 0).toString(16).padStart(8, '0');
 }
 
 function looksLikeLoginPage(html) {

@@ -1,5 +1,5 @@
 export const EXTENSION_SOURCE = 'browser_extension';
-export const PAYLOAD_SCHEMA_VERSION = '1.1';
+export const PAYLOAD_SCHEMA_VERSION = '2.0';
 
 export const PROVIDER_ORDER = ['codex', 'ollama_cloud'];
 
@@ -11,6 +11,10 @@ export const PROVIDERS = {
     logoUrl: 'https://unpkg.com/@lobehub/icons-static-svg@1.91.0/icons/codex.svg',
     logoText: 'CX',
     defaultIntervalMinutes: 5,
+    windows: [
+      { id: 'short', label: '5-hour window', durationSeconds: 18_000 },
+      { id: 'long', label: 'Weekly window', durationSeconds: 604_800 },
+    ],
     usagePageUrl: 'https://chatgpt.com/codex/cloud/settings/analytics',
   },
   ollama_cloud: {
@@ -20,6 +24,10 @@ export const PROVIDERS = {
     logoUrl: 'https://ollama.com/public/ollama.png',
     logoText: 'OC',
     defaultIntervalMinutes: 5,
+    windows: [
+      { id: 'session', label: 'Session window', durationSeconds: 18_000 },
+      { id: 'weekly', label: 'Weekly window', durationSeconds: 604_800 },
+    ],
     usagePageUrl: 'https://ollama.com/settings',
   },
 };

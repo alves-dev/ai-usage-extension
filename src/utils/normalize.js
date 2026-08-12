@@ -60,25 +60,25 @@ export function normalizeStatus(status) {
 }
 
 export function normalizeSuccessPayload(providerId, result, extensionVersion) {
-  const usage = normalizeUsage(result.usage || {});
   return {
     schema_version: PAYLOAD_SCHEMA_VERSION,
-    source: EXTENSION_SOURCE,
-    source_version: extensionVersion,
+    collector_data: {
+      id: EXTENSION_SOURCE,
+      version: extensionVersion,
+      transport: 'webhook',
+    },
     collected_at: nowIso(),
     provider: providerId,
     status: 'ok',
     account_data: pruneEmpty({
+      id: result.account?.id,
+      id_kind: result.account?.id_kind,
+      label: result.account?.label,
+      username: result.account?.username,
       email: result.account?.email,
+      plan: result.account?.plan ? { type: result.account.plan } : undefined,
     }),
-    plan_data: pruneEmpty({
-      type: result.account?.plan,
-    }),
-    provider_data: pruneEmpty({
-      usage,
-      collection_method: result.collectionMethod || 'unknown',
-      endpoint: result.endpoint,
-    }),
+    usage_data: { windows: normalizeWindows(result.usage_data?.windows || []) },
     error: null,
   };
 }
@@ -87,14 +87,16 @@ export function normalizeErrorPayload(providerId, status, error, extensionVersio
   const safeStatus = normalizeStatus(status);
   return {
     schema_version: PAYLOAD_SCHEMA_VERSION,
-    source: EXTENSION_SOURCE,
-    source_version: extensionVersion,
+    collector_data: {
+      id: EXTENSION_SOURCE,
+      version: extensionVersion,
+      transport: 'webhook',
+    },
     collected_at: nowIso(),
     provider: providerId,
     status: safeStatus,
     account_data: {},
-    plan_data: {},
-    provider_data: {},
+    usage_data: { windows: [] },
     error: {
       code: error?.code || safeStatus,
       message: error?.message || 'Unknown error',
@@ -107,14 +109,18 @@ export function normalizeCollectorResult(providerId, result, extensionVersion) {
     const payload = result.payload;
     return {
       schema_version: PAYLOAD_SCHEMA_VERSION,
-      source: EXTENSION_SOURCE,
-      source_version: extensionVersion,
+      collector_data: {
+        id: EXTENSION_SOURCE,
+        version: extensionVersion,
+        transport: 'webhook',
+      },
       collected_at: nowIso(),
       provider: providerId,
       status: 'ok',
-      account_data: normalizeObject(payload.account_data),
-      plan_data: normalizeObject(payload.plan_data),
-      provider_data: normalizeObject(payload.provider_data),
+      account_data: normalizeAccountData(payload.account_data),
+      usage_data: {
+        windows: normalizeWindows(payload.usage_data?.windows),
+      },
       error: null,
     };
   }
@@ -125,6 +131,36 @@ export function normalizeCollectorResult(providerId, result, extensionVersion) {
 
   const status = result?.status || 'unknown_error';
   return normalizeErrorPayload(providerId, status, result?.error, extensionVersion);
+}
+
+function normalizeAccountData(value) {
+  const account = normalizeObject(value);
+  if (account.plan && typeof account.plan !== 'object') {
+    account.plan = { type: account.plan };
+  }
+  return account;
+}
+
+function normalizeWindows(windows) {
+  if (!Array.isArray(windows)) {
+    return [];
+  }
+
+  return windows.map((window) => ({
+    id: String(window?.id || '').trim(),
+    label: String(window?.label || '').trim(),
+    duration_seconds: toNumber(window?.duration_seconds),
+    used_percent: toNumber(window?.used_percent),
+    reset_at: normalizeDateLike(window?.reset_at),
+    limit_reached: Boolean(window?.limit_reached),
+    ...(Number.isFinite(toNumber(window?.reset_after_seconds))
+      ? { reset_after_seconds: toNumber(window.reset_after_seconds) }
+      : {}),
+  })).filter((window) => (
+    window.id && window.label && Number.isFinite(window.duration_seconds) && window.duration_seconds > 0 &&
+    Number.isFinite(window.used_percent) && window.used_percent >= 0 && window.used_percent <= 100 &&
+    window.reset_at
+  ));
 }
 
 export function normalizeUsage(usage) {

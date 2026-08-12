@@ -59,7 +59,7 @@ test('handles missing permissions, accepted errors, HTTP errors, and network fai
     assert.equal((await sendPayloadToHomeAssistant(config, {})).error.code, 'ha_http_500');
     globalThis.fetch = async () => { throw new Error('offline'); };
     assert.equal((await sendPayloadToHomeAssistant(config, {})).error.code, 'ha_request_failed');
-    assert.equal(createConnectionTestPayload('1.0.0').source_version, '1.0.0');
+    assert.equal(createConnectionTestPayload('2026.8.0').collector_data.version, '2026.8.0');
   } finally {
     globalThis.chrome = originalChrome;
     globalThis.fetch = originalFetch;

@@ -199,6 +199,25 @@ h2 {
   gap: 14px;
 }
 
+.window-labels {
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+}
+
+.window-labels-title {
+  margin-bottom: 10px;
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.window-label-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
 .form-grid {
   grid-template-columns: 1.2fr 1fr;
 }
@@ -372,7 +391,8 @@ h2 {
   }
 
   .form-grid,
-  .provider-grid {
+  .provider-grid,
+  .window-label-list {
     grid-template-columns: 1fr;
   }
 }

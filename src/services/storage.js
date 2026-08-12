@@ -17,6 +17,7 @@ export function createDefaultConfig() {
         {
           enabled: true,
           intervalMinutes: PROVIDERS[providerId].defaultIntervalMinutes,
+          windowLabels: Object.fromEntries(PROVIDERS[providerId].windows.map((window) => [window.id, window.label])),
         },
       ]),
     ),
@@ -110,6 +111,12 @@ function mergeConfig(storedConfig) {
       defaults.providers[providerId].intervalMinutes,
     );
     config.providers[providerId].enabled = Boolean(config.providers[providerId].enabled);
+    config.providers[providerId].windowLabels = Object.fromEntries(
+      PROVIDERS[providerId].windows.map((window) => [
+        window.id,
+        String(config.providers[providerId].windowLabels?.[window.id] || window.label).trim() || window.label,
+      ]),
+    );
   }
 
   return config;

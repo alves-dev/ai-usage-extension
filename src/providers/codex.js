@@ -4,10 +4,11 @@ const CODEX_USAGE_PAGE = 'https://chatgpt.com/codex/cloud/settings/analytics';
 const FIVE_HOUR_WINDOW_SECONDS = 18_000;
 const WEEKLY_WINDOW_SECONDS = 604_800;
 
-export async function collectCodex(_settings, context) {
+export async function collectCodex(settings = {}, context) {
   const directResult = await fetchCodexUsage({
     usageEndpoint: CODEX_USAGE_ENDPOINT,
     sessionEndpoint: CODEX_SESSION_ENDPOINT,
+    settings,
   });
   if (directResult.status === 'ok' || !context?.runPageProbe) {
     return directResult;
@@ -15,12 +16,12 @@ export async function collectCodex(_settings, context) {
 
   const pageResult = await context.runPageProbe(CODEX_USAGE_PAGE, fetchCodexUsageFromPage);
   if (pageResult?.status === 'ok' && pageResult.data) {
-    return buildCodexResult(pageResult.data);
+    return buildCodexResult(pageResult.data, settings);
   }
   return pageResult || directResult;
 }
 
-async function fetchCodexUsage({ usageEndpoint, sessionEndpoint }) {
+async function fetchCodexUsage({ usageEndpoint, sessionEndpoint, settings = {} }) {
   try {
     const tokenResult = await fetchChatGptAccessToken(sessionEndpoint);
     if (tokenResult.status !== 'ok') {
@@ -41,7 +42,7 @@ async function fetchCodexUsage({ usageEndpoint, sessionEndpoint }) {
     }
 
     const data = await response.json();
-    return buildCodexResult(data);
+    return buildCodexResult(data, settings);
   } catch (error) {
     return {
       status: 'provider_unavailable',
@@ -165,10 +166,13 @@ function mapPageHttpError(status, resourceName) {
   };
 }
 
-function buildCodexResult(data) {
+function buildCodexResult(data, settings = {}) {
   const missingFields = [];
   if (!data?.email) {
     missingFields.push('email');
+  }
+  if (!data?.account_id && !data?.user_id) {
+    missingFields.push('account_id or user_id');
   }
   if (!data?.plan_type) {
     missingFields.push('plan_type');
@@ -191,18 +195,42 @@ function buildCodexResult(data) {
     status: 'ok',
     payload: {
       account_data: pruneEmpty({
-        user_id: data.user_id,
-        account_id: data.account_id,
+        id: data.account_id || data.user_id,
+        id_kind: data.account_id ? 'provider_account_id' : 'provider_user_id',
+        label: data.email,
+        username: data.username,
         email: data.email,
+        plan: { type: data.plan_type },
       }),
-      plan_data: {
-        type: data.plan_type,
-      },
-      provider_data: {
-        rate_limit: normalizeCodexRateLimit(data.rate_limit),
+      usage_data: {
+        windows: normalizeCodexWindows(data.rate_limit, settings.windowLabels),
       },
     },
   };
+}
+
+export function normalizeCodexWindows(rateLimit, labels = {}) {
+  const windows = [];
+  for (const window of [rateLimit?.primary_window, rateLimit?.secondary_window]) {
+    const duration = Number(window?.limit_window_seconds);
+    const id = duration === FIVE_HOUR_WINDOW_SECONDS ? 'short' : duration === WEEKLY_WINDOW_SECONDS ? 'long' : null;
+    if (!window || !id) {
+      if (window) {
+        console.warn('Codex returned an unknown rate-limit window duration', duration);
+      }
+      continue;
+    }
+    windows.push({
+      id,
+      label: labels[id] || (id === 'short' ? '5-hour window' : 'Weekly window'),
+      duration_seconds: duration,
+      used_percent: Number(window.used_percent),
+      reset_at: normalizeCodexDate(window.reset_at),
+      limit_reached: Boolean(window.limit_reached ?? rateLimit.limit_reached),
+      ...(Number.isFinite(Number(window.reset_after_seconds)) ? { reset_after_seconds: Number(window.reset_after_seconds) } : {}),
+    });
+  }
+  return windows;
 }
 
 export function normalizeCodexRateLimit(rateLimit) {
@@ -262,6 +290,15 @@ function mapCodexHttpError(status, resourceName) {
 
 function isPlainObject(value) {
   return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
+}
+
+function normalizeCodexDate(value) {
+  const numeric = Number(value);
+  if (Number.isFinite(numeric)) {
+    return new Date(numeric < 10_000_000_000 ? numeric * 1000 : numeric).toISOString();
+  }
+  const timestamp = Date.parse(String(value || ''));
+  return Number.isNaN(timestamp) ? undefined : new Date(timestamp).toISOString();
 }
 
 function pruneEmpty(object) {

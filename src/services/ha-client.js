@@ -125,16 +125,16 @@ export async function sendPayloadToHomeAssistant(homeAssistantConfig, payload, o
 export function createConnectionTestPayload(extensionVersion) {
   return {
     schema_version: PAYLOAD_SCHEMA_VERSION,
-    source: EXTENSION_SOURCE,
-    source_version: extensionVersion,
+    collector_data: {
+      id: EXTENSION_SOURCE,
+      version: extensionVersion,
+      transport: 'webhook',
+    },
     collected_at: nowIso(),
     provider: 'extension',
     status: 'ok',
     account_data: {},
-    plan_data: {},
-    provider_data: {
-      collection_method: 'connection_test',
-    },
+    usage_data: { windows: [] },
     error: null,
   };
 }
